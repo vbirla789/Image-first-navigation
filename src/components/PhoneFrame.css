@@ -1,0 +1,118 @@
+/* iPhone mockup shell — breathable stage around the app on larger screens */
+.phone-stage {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 40px;
+  background: #e8e9ee;
+}
+
+.phone-shell {
+  display: flex;
+  flex-direction: column;
+  width: 375px;
+  height: min(812px, calc(100dvh - 80px));
+  min-height: 480px;
+  flex-shrink: 0;
+  border-radius: 44px;
+  overflow: hidden;
+  background: var(--page-bg);
+  box-shadow:
+    0 32px 64px rgba(16, 22, 40, 0.16),
+    0 4px 16px rgba(16, 22, 40, 0.08);
+}
+
+/* status bar */
+.phone-status {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 44px;
+  padding: 0 26px 0 30px;
+  background: var(--surface);
+  color: var(--bg-1000);
+}
+
+.phone-status__time {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+}
+
+.phone-status__icons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* app viewport — pages scroll inside here */
+.phone-screen {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+}
+
+.phone-screen::-webkit-scrollbar {
+  display: none;
+}
+
+/* home indicator */
+.phone-home {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  height: 25px;
+  padding-top: 8px;
+  background: var(--surface);
+}
+
+.phone-home__bar {
+  width: 124px;
+  height: 5px;
+  border-radius: 8px;
+  background: var(--bg-1000);
+}
+
+/* dark chrome for the immersive image view */
+.phone-shell--dark {
+  background: #000000;
+}
+
+.phone-shell--dark .phone-status {
+  background: #000000;
+  color: #ffffff;
+}
+
+.phone-shell--dark .phone-home {
+  background: #000000;
+}
+
+.phone-shell--dark .phone-home__bar {
+  background: #ffffff;
+}
+
+/* real phones / small windows: drop the mockup chrome, go full-bleed */
+@media (max-width: 520px) {
+  .phone-stage {
+    padding: 0;
+  }
+
+  .phone-shell {
+    width: 100%;
+    height: 100dvh;
+    max-height: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .phone-status,
+  .phone-home {
+    display: none;
+  }
+}

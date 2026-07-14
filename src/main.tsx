@@ -5,11 +5,17 @@ import './index.css'
 import PDP from './pages/PDP'
 import PRP from './pages/PRP'
 import ImageView from './pages/ImageView'
+import PhoneFrame from './components/PhoneFrame'
 
 const router = createBrowserRouter([
-  { path: '/', element: <PDP /> },
-  { path: '/reviews', element: <PRP /> },
-  { path: '/image-view', element: <ImageView /> },
+  {
+    element: <PhoneFrame />,
+    children: [
+      { path: '/', element: <PDP /> },
+      { path: '/reviews', element: <PRP /> },
+      { path: '/image-view', element: <ImageView /> },
+    ],
+  },
 ])
 
 createRoot(document.getElementById('root')!).render(

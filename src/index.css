@@ -78,13 +78,11 @@ img {
   max-width: 100%;
 }
 
-/* Mobile-first m-web shell: full width on phones, capped on larger screens */
+/* App shell fills the phone-frame screen (or the viewport on real phones) */
 .app-shell {
   position: relative;
   width: 100%;
-  max-width: 480px;
-  margin: 0 auto;
-  min-height: 100dvh;
+  min-height: 100%;
   background: var(--page-bg);
 }
 

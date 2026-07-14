@@ -1,5 +1,6 @@
 .prp {
-  padding-bottom: 96px;
+  display: flex;
+  flex-direction: column;
 }
 
 /* ---------- header ---------- */

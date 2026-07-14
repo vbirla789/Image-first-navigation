@@ -1,51 +1,48 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { photoReviews, product, reviews, type Review, type ReviewPhoto } from '../data/product'
+import { photoReviews, product, reviews } from '../data/product'
 import { MORPH_NAME, getMorphSource, setMorphSource, withLocalTransition } from '../lib/morph'
 import './ImageView.css'
 
-interface Slide {
-  review: Review
-  photo: ReviewPhoto
-  globalIndex: number
-}
-
-/** one continuous swipe stream across every review's photos */
-const slides: Slide[] = reviews.flatMap((review) => review.photos.map((photo) => ({ review, photo, globalIndex: 0 })))
-slides.forEach((slide, i) => (slide.globalIndex = i))
-
-function slideIndexFor(reviewId: string | null, photoIndex: number): number {
-  const first = slides.findIndex((s) => s.review.id === reviewId)
-  if (first === -1) return 0
-  return Math.min(first + photoIndex, slides.length - 1)
+function initialReviewIndex(reviewId: string | null): number {
+  const idx = reviews.findIndex((r) => r.id === reviewId)
+  return idx === -1 ? 0 : idx
 }
 
 /**
- * Image-first view ("Single Review") — reached by tapping any review
- * photo on the PDP or PRP. The tapped thumbnail morphs into the main
- * image card via the View Transitions API.
+ * Image-first view ("Single Review") — reached by tapping any review photo
+ * on the PDP or PRP. Story-style navigation:
+ *  - tap right/left half of the image → next/previous photo of the SAME
+ *    review (progress bars in the header track the position)
+ *  - horizontal drag/swipe → next/previous REVIEW
  */
 export default function ImageView() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
-  const [active, setActive] = useState(() =>
-    slideIndexFor(params.get('review'), Number(params.get('photo') ?? 0)),
+  const [activeReview, setActiveReview] = useState(() => initialReviewIndex(params.get('review')))
+  // one photo cursor per review, so swiping back restores where you were
+  const [photoIndexes, setPhotoIndexes] = useState<number[]>(() =>
+    reviews.map((r) => {
+      if (r.id !== params.get('review')) return 0
+      return Math.max(0, Math.min(r.photos.length - 1, Number(params.get('photo') ?? 0)))
+    }),
   )
   const [expanded, setExpanded] = useState(false)
   const trackRef = useRef<HTMLDivElement>(null)
   const drag = useRef({ startX: 0, startLeft: 0, active: false, moved: false })
 
-  const review = slides[active].review
+  const review = reviews[activeReview]
+  const photoIndex = photoIndexes[activeReview]
 
-  // position the carousel on the tapped photo (before paint; snap disabled so
+  // position the carousel on the entry review (before paint; snap disabled so
   // Chrome doesn't animate the initial jump)
   useLayoutEffect(() => {
     const el = trackRef.current
     if (!el) return
     el.style.scrollSnapType = 'none'
     const position = () => {
-      el.scrollLeft = active * el.clientWidth
+      el.scrollLeft = activeReview * el.clientWidth
     }
     position()
     requestAnimationFrame(() => {
@@ -57,25 +54,66 @@ export default function ImageView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // keep the carousel aligned with the active review when the viewport
+  // resizes (rotation, keyboard) — otherwise scrollLeft/clientWidth briefly
+  // maps to a different review and resets the UI
+  useEffect(() => {
+    const onResize = () => {
+      const el = trackRef.current
+      if (el) el.scrollLeft = activeReview * el.clientWidth
+    }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [activeReview])
+
+  const setReview = (idx: number) => {
+    if (idx === activeReview) return
+    setActiveReview(idx)
+    setExpanded(false)
+  }
+
   const onScroll = () => {
     const el = trackRef.current
-    if (!el || drag.current.active || expanded) return
+    if (!el || drag.current.active) return
     const idx = Math.round(el.scrollLeft / el.clientWidth)
-    if (idx !== active && idx >= 0 && idx < slides.length) setActive(idx)
+    if (idx >= 0 && idx < reviews.length) setReview(idx)
   }
 
-  const goTo = (i: number) => {
+  const goToReview = (i: number) => {
     const el = trackRef.current
-    const idx = Math.max(0, Math.min(slides.length - 1, i))
+    const idx = Math.max(0, Math.min(reviews.length - 1, i))
     if (el) el.scrollTo({ left: idx * el.clientWidth, behavior: 'smooth' })
-    if (expanded) {
-      flushSync(() => setActive(idx))
-      el?.scrollTo({ left: idx * (el?.clientWidth || 0) })
-      toggleExpanded(false)
-    }
   }
 
-  // mouse drag-to-swipe (touch swiping is native via scroll-snap)
+  /* tap-tap: right side → next photo, left side → previous photo.
+     Past either end of a review's photos, roll over to the adjacent review. */
+  const changePhoto = (delta: number) => {
+    const next = photoIndex + delta
+    if (next < 0) {
+      goToReview(activeReview - 1)
+      return
+    }
+    if (next >= review.photos.length) {
+      goToReview(activeReview + 1)
+      return
+    }
+    setPhotoIndexes((prev) => prev.map((p, i) => (i === activeReview ? next : p)))
+  }
+
+  /* tap anywhere on the stage (photo or the empty black areas) — attached to
+     the carousel itself because mouse pointer-capture retargets clicks to it */
+  const onCarouselTap = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (drag.current.moved) {
+      drag.current.moved = false
+      return
+    }
+    const el = trackRef.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    changePhoto(e.clientX - rect.left < rect.width * 0.35 ? -1 : 1)
+  }
+
+  // mouse drag-to-swipe between reviews (touch swiping is native via scroll-snap)
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.pointerType !== 'mouse') return
     const el = trackRef.current
@@ -98,29 +136,35 @@ export default function ImageView() {
     if (!el || !drag.current.active) return
     drag.current.active = false
     el.releasePointerCapture(e.pointerId)
-    // snap to the nearest card, biased by drag direction
+    // snap to the nearest review, biased by drag direction
     const dx = e.clientX - drag.current.startX
     const raw = el.scrollLeft / el.clientWidth
     const target = Math.abs(dx) > 40 ? (dx < 0 ? Math.ceil(raw) : Math.floor(raw)) : Math.round(raw)
-    const idx = Math.max(0, Math.min(slides.length - 1, target))
-    setActive(idx)
+    const idx = Math.max(0, Math.min(reviews.length - 1, target))
+    setReview(idx)
     el.scrollTo({ left: idx * el.clientWidth, behavior: 'smooth' })
     window.setTimeout(() => {
       el.style.scrollSnapType = ''
     }, 350)
   }
 
-  const suppressDragClick = (e: React.MouseEvent) => {
-    if (drag.current.moved) {
-      e.preventDefault()
-      e.stopPropagation()
-      drag.current.moved = false
-    }
-  }
-
-  /* expand / collapse: the card morphs into (out of) the pager's active thumbnail */
+  /* expand / collapse inside a view transition so the gradient and text
+     morph instead of jumping */
   const toggleExpanded = (next: boolean) => {
     withLocalTransition(() => flushSync(() => setExpanded(next)))
+  }
+
+  const share = async () => {
+    const url = window.location.origin + `/image-view?review=${review.id}&photo=${photoIndex}`
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: product.shortName, text: review.title, url })
+      } else {
+        await navigator.clipboard.writeText(url)
+      }
+    } catch {
+      /* user dismissed the share sheet */
+    }
   }
 
   const close = () => {
@@ -131,152 +175,124 @@ export default function ImageView() {
     }
     // retarget the reverse morph at the photo currently on screen, so the
     // image scales back down into that photo's thumbnail on the source page
-    const slide = slides[active]
+    const photo = review.photos[photoIndex]
     if (source.key.startsWith('strip-')) {
-      const localIndex = slide.review.photos.indexOf(slide.photo)
-      const strip = photoReviews.find((p) => p.reviewId === slide.review.id && p.photoIndex === localIndex)
+      const strip = photoReviews.find((p) => p.reviewId === review.id && p.photoIndex === photoIndex)
       if (strip) setMorphSource(`strip-${strip.id}`, source.path)
     } else {
-      setMorphSource(`card-${slide.photo.id}`, source.path)
+      setMorphSource(`card-${photo.id}`, source.path)
     }
     navigate(source.path, { viewTransition: true, state: { fromImageView: true } })
   }
 
-  const prevSlide = active > 0 ? slides[active - 1] : null
-  const nextSlide = active < slides.length - 1 ? slides[active + 1] : null
-
   return (
     <div className="app-shell iv">
-      {/* Review header — content keyed by review so it animates on change */}
-      <header className={expanded ? 'iv-header iv-header--expanded' : 'iv-header'}>
-        <div className="iv-header__content" key={review.id}>
-          <div className="iv-header__meta">
+      {/* review carousel — one slide per review, drag/swipe moves between reviews.
+          Every photo of a review stays mounted so taps crossfade smoothly. */}
+      <div
+        className="iv-carousel"
+        ref={trackRef}
+        onScroll={onScroll}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+        onClick={onCarouselTap}
+      >
+        {reviews.map((r, i) => (
+          <div key={r.id} className="iv-slide">
+            {r.photos.map((photo, pi) => (
+              <img
+                key={photo.id}
+                className={pi === photoIndexes[i] ? 'iv-slide__img' : 'iv-slide__img iv-slide__img--hidden'}
+                src={photo.src}
+                alt={`${r.title} — photo ${pi + 1} of ${r.photos.length}`}
+                draggable={false}
+                style={
+                  i === activeReview && pi === photoIndexes[i] ? { viewTransitionName: MORPH_NAME } : undefined
+                }
+              />
+            ))}
+          </div>
+        ))}
+      </div>
+
+      {/* top overlay: page header (close + centered progress bars) + review */}
+      <div className={expanded ? 'iv-top iv-top--expanded' : 'iv-top'}>
+        <div className="iv-header">
+          <button className="iv-close" aria-label="Close" onClick={close}>
+            <img src="/assets/iv3-cross.svg" width={20} height={20} alt="" />
+          </button>
+          <div className="iv-bars">
+            {review.photos.map((p, i) => (
+              <span key={p.id} className={i <= photoIndex ? 'iv-bar' : 'iv-bar iv-bar--upcoming'} />
+            ))}
+          </div>
+        </div>
+        <div className="iv-review" key={review.id}>
+          <div className="iv-review__meta">
             <span className={review.rating >= 3 ? 'iv-pill iv-pill--positive' : 'iv-pill iv-pill--negative'}>
               {review.rating}
               <img src="/assets/iv-star-white.svg" width={12} height={12} alt="" />
             </span>
-            <h2 className="iv-header__title">{review.title}</h2>
+            <span className="iv-review__time">{review.timeAgo}</span>
           </div>
+          <h2 className="iv-review__title">{review.title}</h2>
           {expanded ? (
-            <div className="iv-header__full">
-              {review.fullBody.split('\n').map((para, i) => (
-                <p key={i}>{para}</p>
-              ))}
-              <button className="iv-header__less" onClick={() => toggleExpanded(false)}>
-                Show less
-              </button>
-            </div>
+            <>
+              <p className="iv-review__body">
+                {review.fullBody}{' '}
+                <button className="iv-review__toggle" onClick={() => toggleExpanded(false)}>
+                  show less
+                </button>
+              </p>
+              {review.sizeBought && (
+                <span className="iv-size-chip">
+                  <b>Size bought:</b> {review.sizeBought}
+                </span>
+              )}
+            </>
           ) : (
-            <div className="iv-header__excerpt">
-              <p>{review.fullBody}</p>
-              <button className="iv-header__more" onClick={() => toggleExpanded(true)}>
-                …more
+            <p className="iv-review__body">
+              {review.body}.{' '}
+              <button className="iv-review__toggle" onClick={() => toggleExpanded(true)}>
+                show more
               </button>
-            </div>
+            </p>
           )}
-          <div className="iv-header__user">
-            <span className="iv-header__name">
-              {review.userName}
-              <img src="/assets/iv-check.svg" width={16} height={16} alt="Verified" />
-            </span>
-            <span className="iv-header__time">{review.timeAgo}</span>
-          </div>
-        </div>
-        <button className="iv-close" aria-label="Close" onClick={close}>
-          <img src="/assets/iv-cross.svg" width={20} height={20} alt="" />
-        </button>
-      </header>
-
-      {/* Swipeable image cards — one continuous stream across all reviews */}
-      <div className="iv-stage">
-        <div className={expanded ? 'iv-carousel-wrap iv-carousel-wrap--collapsed' : 'iv-carousel-wrap'}>
-          <div
-            className="iv-carousel"
-            ref={trackRef}
-            onScroll={onScroll}
-            onPointerDown={onPointerDown}
-            onPointerMove={onPointerMove}
-            onPointerUp={endDrag}
-            onPointerCancel={endDrag}
-            onClickCapture={suppressDragClick}
-          >
-            {slides.map((slide, i) => (
-              <div key={slide.photo.id} className="iv-slide">
-                <img
-                  className="iv-card__img"
-                  src={slide.photo.src}
-                  alt={`Review photo ${i + 1}`}
-                  draggable={false}
-                  style={i === active && !expanded ? { viewTransitionName: MORPH_NAME } : undefined}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Action bar: like / share / zoom + photo pager */}
-        <div className="iv-actionbar">
-          <div className="iv-actionbar__left">
-            <button className="iv-action" aria-label="Like">
-              <img src="/assets/iv2-like.svg" width={24} height={24} alt="" />
-            </button>
-            <button className="iv-action" aria-label="Share">
-              <img src="/assets/iv2-share.svg" width={24} height={24} alt="" />
-            </button>
-            <button className="iv-action" aria-label="Zoom">
-              <img src="/assets/iv2-search.svg" width={24} height={24} alt="" />
-            </button>
-          </div>
-          <div className="iv-pager">
-            <button className="iv-pager__nav" aria-label="Previous photo" disabled={active === 0} onClick={() => goTo(active - 1)}>
-              <img src="/assets/iv2-chevron-left.svg" width={20} height={20} alt="" />
-            </button>
-            <div className="iv-pager__cluster">
-              {prevSlide && (
-                <span className="iv-pager__thumb iv-pager__thumb--side iv-pager__thumb--prev">
-                  <img src={prevSlide.photo.src} alt="" />
-                </span>
-              )}
-              <span className="iv-pager__thumb iv-pager__thumb--active">
-                <img
-                  src={slides[active].photo.src}
-                  alt=""
-                  style={expanded ? { viewTransitionName: MORPH_NAME } : undefined}
-                />
-              </span>
-              {nextSlide && (
-                <span className="iv-pager__thumb iv-pager__thumb--side iv-pager__thumb--next">
-                  <img src={nextSlide.photo.src} alt="" />
-                </span>
-              )}
-            </div>
-            <button
-              className="iv-pager__nav"
-              aria-label="Next photo"
-              disabled={active === slides.length - 1}
-              onClick={() => goTo(active + 1)}
-            >
-              <img src="/assets/iv2-chevron-right.svg" width={20} height={20} alt="" />
-            </button>
-          </div>
+          <p className="iv-review__user">
+            {review.userName}
+            <img src="/assets/iv-check.svg" width={16} height={16} alt="Verified" />
+          </p>
         </div>
       </div>
 
-      {/* Product quick view tray */}
-      <footer className="iv-quickview">
-        <div className="iv-quickview__card">
+      {/* bottom overlay: floating actions + product quick view tray */}
+      <div className="iv-bottom">
+        <div className="iv-actions">
+          <button className="iv-action" aria-label="Like">
+            <img src="/assets/iv3-like.svg" width={24} height={24} alt="" />
+          </button>
+          <button className="iv-action" aria-label="Share" onClick={share}>
+            <img src="/assets/iv3-share.svg" width={24} height={24} alt="" />
+          </button>
+          <button className="iv-action" aria-label="Zoom">
+            <img src="/assets/iv3-search.svg" width={24} height={24} alt="" />
+          </button>
+        </div>
+        <div className="iv-quickview">
           <img className="iv-quickview__thumb" src={product.thumb} alt="" />
           <div className="iv-quickview__info">
-            <p className="iv-quickview__name">{product.name}</p>
+            <p className="iv-quickview__name">{product.shortName}</p>
             <p className="iv-quickview__price">
               <b>Đ{product.price}</b> <s>{product.oldPrice}</s> <span>47%</span>
             </p>
           </div>
           <button className="iv-quickview__atc" aria-label="Add to cart">
-            <img src="/assets/iv-cart.svg" width={20} height={20} alt="" />
+            <img src="/assets/iv3-cart.svg" width={20} height={20} alt="" />
           </button>
         </div>
-      </footer>
+      </div>
     </div>
   )
 }
