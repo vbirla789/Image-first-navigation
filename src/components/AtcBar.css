@@ -1,0 +1,66 @@
+.atc-bar {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
+  background: var(--surface);
+  box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.05);
+  z-index: 50;
+}
+
+.atc-bar__qty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border: 1px solid var(--bg-300);
+  border-radius: var(--radius-12);
+  background: var(--surface);
+}
+
+.atc-bar__qty-label {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: -0.12px;
+  line-height: 14px;
+  color: var(--bg-500);
+}
+
+.atc-bar__qty-value {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.16px;
+  line-height: 20px;
+  color: var(--bg-800);
+}
+
+.atc-bar__buy,
+.atc-bar__add {
+  flex: 1;
+  height: 47px;
+  border-radius: var(--radius-10);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 20px;
+}
+
+.atc-bar__buy {
+  border: 1px solid var(--accent-atc);
+  color: var(--accent-atc);
+  background: var(--surface);
+}
+
+.atc-bar__add {
+  background: var(--accent-atc);
+  border: 1px solid var(--accent-atc);
+  color: #ffffff;
+}

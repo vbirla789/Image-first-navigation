@@ -1,0 +1,185 @@
+/* ============ Design tokens (from Figma variables) ============ */
+:root {
+  /* blue-gray scale */
+  --bg-50: #fcfcfd;
+  --bg-100: #f9f9fb;
+  --bg-200: #f2f3f7;
+  --bg-300: #eaecf0;
+  --bg-400: #d0d4dd;
+  --bg-500: #989fb3;
+  --bg-600: #666d85;
+  --bg-700: #475067;
+  --bg-800: #343d54;
+  --bg-900: #1d2539;
+  --bg-1000: #101628;
+
+  /* semantic */
+  --text-primary: #212121;
+  --text-secondary: #5d5d5d;
+  --text-secondary-hover: #3c3c3c;
+  --neutral-black: #0e0e0e;
+  --accent: #0057ff;
+  --accent-atc: #3866df;
+  --blue-50: #eff7ff;
+  --positive: #05af25;
+  --positive-secondary: #006300;
+  --brand-secondary: #f8b200;
+  --warning: #f36302;
+  --deal-red: #eb001b;
+  --surface: #ffffff;
+  --page-bg: #f2f3f7;
+
+  /* AI gradient */
+  --ai-from: rgba(65, 70, 206, 0.92);
+  --ai-to: rgba(191, 61, 235, 0.92);
+  --ai-bg-from: rgba(65, 70, 206, 0.04);
+  --ai-bg-to: rgba(191, 61, 235, 0.04);
+
+  /* type */
+  --font-primary: 'Figtree', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  /* radius */
+  --radius-4: 4px;
+  --radius-6: 6px;
+  --radius-8: 8px;
+  --radius-10: 10px;
+  --radius-12: 12px;
+  --radius-16: 16px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-primary);
+  background: #e8e9ee;
+  color: var(--bg-1000);
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: 'case' 1;
+}
+
+button {
+  font-family: inherit;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: inherit;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+/* Mobile-first m-web shell: full width on phones, capped on larger screens */
+.app-shell {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  background: var(--page-bg);
+}
+
+/* ============ shared bits ============ */
+.icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--bg-200);
+  flex-shrink: 0;
+}
+
+.stars-row {
+  display: flex;
+  align-items: center;
+}
+
+.stars-row img {
+  flex-shrink: 0;
+}
+
+.section-title {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.28px;
+  line-height: 17px;
+  color: var(--bg-1000);
+}
+
+/* ============ shared-element morph (View Transitions API) ============
+   Choreography (matches the motion spec recording):
+   1. the tapped photo leads — it flies/scales to its destination (~500ms ease-out)
+   2. the old page fades out to white quickly underneath it (~200ms)
+   3. once the photo has landed, the new page's UI fades in (~300ms, delayed)   */
+@keyframes vt-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes vt-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+::view-transition-old(root) {
+  animation: vt-fade-out 0.2s ease-out both;
+}
+
+::view-transition-new(root) {
+  animation: vt-fade-in 0.3s ease-out 0.25s both;
+}
+
+::view-transition-group(review-photo) {
+  animation-duration: 0.5s;
+  animation-timing-function: cubic-bezier(0.22, 0.9, 0.26, 1);
+}
+
+/* both snapshots fill the morphing box without distortion; the UA's
+   plus-lighter cross-fade blends them so scaling stays smooth */
+::view-transition-old(review-photo),
+::view-transition-new(review-photo) {
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+  overflow: hidden;
+}
+
+::view-transition-image-pair(review-photo) {
+  isolation: isolate;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* same-document transitions (expand/collapse in the image view): the photo
+   still morphs, but the rest of the page does a plain quick cross-fade —
+   no white flash, no staged delay */
+.vt-local::view-transition-old(root) {
+  animation: vt-fade-out 0.25s ease both;
+}
+
+.vt-local::view-transition-new(root) {
+  animation: vt-fade-in 0.25s ease both;
+}
+
+/* horizontal scroller (mobile-first: swipe) */
+.h-scroll {
+  display: flex;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.h-scroll::-webkit-scrollbar {
+  display: none;
+}

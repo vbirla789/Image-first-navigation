@@ -1,0 +1,417 @@
+.iv {
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+/* ---------- review header ---------- */
+.iv-header {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 64px 0 16px;
+  flex-shrink: 0;
+}
+
+.iv-header--expanded {
+  overflow-y: auto;
+}
+
+/* header content fades/slides in when the active review changes mid-swipe */
+.iv-header__content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: iv-text-in 0.25s ease-out both;
+}
+
+.iv-header__meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.iv-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.1px;
+  line-height: 18px;
+  flex-shrink: 0;
+}
+
+.iv-pill--positive {
+  background: #0f8857;
+}
+
+.iv-pill--negative {
+  background: #e5641a;
+}
+
+.iv-header__title {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.1px;
+  line-height: 20px;
+  color: var(--bg-900);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* collapsed: one truncated line with an inline "…more" pinned at its end */
+.iv-header__excerpt {
+  position: relative;
+}
+
+.iv-header__excerpt p {
+  font-size: 14px;
+  letter-spacing: -0.1px;
+  line-height: 20px;
+  color: var(--bg-600);
+  white-space: nowrap;
+  overflow: hidden;
+  padding-right: 48px;
+}
+
+.iv-header__more {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 0 0 0 4px;
+  background: var(--surface);
+  font-size: 14px;
+  letter-spacing: -0.1px;
+  line-height: 20px;
+  color: var(--bg-600);
+  text-decoration: underline;
+}
+
+/* expanded: full review text + Show less */
+.iv-header__full {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: iv-text-in 0.25s ease-out both;
+}
+
+.iv-header__full p {
+  font-size: 14px;
+  letter-spacing: -0.1px;
+  line-height: 24px;
+  color: var(--bg-600);
+}
+
+.iv-header__less {
+  align-self: flex-start;
+  margin-top: 6px;
+  padding: 0;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.1px;
+  line-height: 20px;
+  color: var(--bg-1000);
+}
+
+@keyframes iv-text-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* reviewer line */
+.iv-header__user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.iv-header__name {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.1px;
+  line-height: 20px;
+  color: var(--bg-900);
+}
+
+.iv-header__time {
+  font-size: 14px;
+  letter-spacing: -0.1px;
+  line-height: 20px;
+  color: var(--bg-600);
+}
+
+.iv-close {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 9999px;
+  background: var(--surface);
+  border: 1px solid var(--bg-200);
+}
+
+/* ---------- image stage ---------- */
+.iv-stage {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* wrapper collapses when the review text is expanded — the view transition
+   animates the change (the card morphs into the pager's active thumbnail) */
+.iv-carousel-wrap {
+  flex: 1 1 0%;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+  opacity: 1;
+}
+
+.iv-carousel-wrap--collapsed {
+  flex-grow: 0.0001;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.iv-carousel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  cursor: grab;
+}
+
+.iv-carousel:active {
+  cursor: grabbing;
+}
+
+.iv-carousel::-webkit-scrollbar {
+  display: none;
+}
+
+.iv-slide {
+  flex: 0 0 100%;
+  scroll-snap-align: center;
+  display: flex;
+  align-items: stretch;
+  padding: 16px 12px;
+  min-width: 0;
+}
+
+/* full-height clean image card, no overlays */
+.iv-card__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 24px;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* ---------- action bar ---------- */
+.iv-actionbar {
+  flex-shrink: 0;
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px 16px;
+}
+
+.iv-actionbar__left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.iv-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  border-radius: 9999px;
+  border: 1px solid var(--bg-300);
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(14px);
+}
+
+/* photo pager pill */
+.iv-pager {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px;
+  border-radius: 9999px;
+  border: 1px solid var(--bg-300);
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(14px);
+}
+
+.iv-pager__nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 0;
+}
+
+.iv-pager__nav:disabled {
+  opacity: 0.3;
+}
+
+.iv-pager__cluster {
+  position: relative;
+  width: 55px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+.iv-pager__thumb {
+  position: absolute;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.iv-pager__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.iv-pager__thumb--side {
+  top: 4px;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 0.75px solid #ffffff;
+}
+
+.iv-pager__thumb--prev {
+  left: 1px;
+}
+
+.iv-pager__thumb--next {
+  right: 1px;
+}
+
+.iv-pager__thumb--active {
+  top: 2px;
+  left: 13.5px;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  border: 1.75px solid #ffffff;
+  box-shadow: 0 0 4.4px rgba(0, 0, 0, 0.12);
+  z-index: 1;
+}
+
+.iv-pager__thumb--active img {
+  border-radius: 5px;
+}
+
+/* ---------- product quick view tray ---------- */
+.iv-quickview {
+  flex-shrink: 0;
+  padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
+  background: var(--bg-200);
+  border-radius: 16px 16px 0 0;
+}
+
+.iv-quickview__card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.iv-quickview__thumb {
+  width: 36px;
+  height: 48px;
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 0.75px solid var(--bg-200);
+  background: var(--bg-100);
+}
+
+.iv-quickview__info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.iv-quickview__name {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.1px;
+  line-height: 20px;
+  color: var(--bg-700);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.iv-quickview__price {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+}
+
+.iv-quickview__price b {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--neutral-black);
+}
+
+.iv-quickview__price s {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: -0.12px;
+  color: var(--bg-500);
+}
+
+.iv-quickview__price span {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: -0.12px;
+  color: #13645f;
+}
+
+.iv-quickview__atc {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 48px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: #0f7eff;
+}
