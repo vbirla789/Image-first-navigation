@@ -30,6 +30,9 @@ export default function ImageView() {
     ),
   )
   const [expanded, setExpanded] = useState(false)
+  // tap anywhere on the image toggles an immersive view: all chrome (header,
+  // product card, review block, actions) fades away so only the photo remains
+  const [chromeHidden, setChromeHidden] = useState(false)
   // FTUX: nudge that swiping down reveals other people's reviews (once per session)
   const [hintVisible, setHintVisible] = useState(() => !sessionStorage.getItem('iv-vhint-seen'))
   const vtrackRef = useRef<HTMLDivElement>(null)
@@ -41,6 +44,7 @@ export default function ImageView() {
     fromLeft: 0,
     active: false,
     axis: '' as '' | 'h' | 'v',
+    moved: false,
   })
 
   const review = reviews[activeReview]
@@ -111,6 +115,16 @@ export default function ImageView() {
     })
   }
 
+  /* tap on the stage (not a button, not a drag) toggles the immersive view */
+  const onStageTap = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (drag.current.moved) {
+      drag.current.moved = false
+      return
+    }
+    if ((e.target as HTMLElement).closest('button')) return
+    setChromeHidden((prev) => !prev)
+  }
+
   const onVScroll = () => {
     if (drag.current.active || Date.now() - resizedAt.current < 300) return
     window.clearTimeout(vTimer.current)
@@ -162,6 +176,7 @@ export default function ImageView() {
       fromLeft: h.scrollLeft,
       active: true,
       axis: '',
+      moved: false,
     }
     v.style.scrollSnapType = 'none'
     h.style.scrollSnapType = 'none'
@@ -178,6 +193,7 @@ export default function ImageView() {
     const dy = e.clientY - drag.current.startY
     if (!drag.current.axis && Math.max(Math.abs(dx), Math.abs(dy)) > 8) {
       drag.current.axis = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v'
+      drag.current.moved = true
     }
     if (drag.current.axis === 'h') {
       const h = htracks.current[activeReview]
@@ -284,7 +300,7 @@ export default function ImageView() {
   }
 
   return (
-    <div className="app-shell iv">
+    <div className={chromeHidden ? 'app-shell iv iv--clean' : 'app-shell iv'}>
       {/* vertical feed of full-screen review pages; each page carries its own
           horizontal photo carousel plus its copy and product tray */}
       <div
@@ -295,6 +311,7 @@ export default function ImageView() {
         onPointerMove={onPointerMove}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
+        onClick={onStageTap}
       >
         {reviews.map((r, i) => {
           const pIdx = photoIndexes[i]
