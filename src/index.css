@@ -65,6 +65,13 @@ body {
   font-feature-settings: 'case' 1;
 }
 
+/* dark browser chrome for the image view — iOS colors the status bar area
+   from the document background, so both html and body must go black */
+html.chrome-dark,
+html.chrome-dark body {
+  background: #000000;
+}
+
 button {
   font-family: inherit;
   border: none;

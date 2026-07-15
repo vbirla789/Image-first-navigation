@@ -10,10 +10,16 @@ import './PhoneFrame.css'
 export default function PhoneFrame() {
   const dark = useLocation().pathname.startsWith('/image-view')
 
-  // color the real browser chrome (iOS status bar area) to match the route
+  // color the real browser chrome (iOS status bar area) to match the route.
+  // iOS Safari samples the document background and only reliably reads
+  // theme-color on insertion, so re-create the meta AND flip the page bg.
   useEffect(() => {
-    const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
-    if (meta) meta.content = dark ? '#000000' : '#ffffff'
+    document.documentElement.classList.toggle('chrome-dark', dark)
+    document.querySelector('meta[name="theme-color"]')?.remove()
+    const meta = document.createElement('meta')
+    meta.name = 'theme-color'
+    meta.content = dark ? '#000000' : '#ffffff'
+    document.head.appendChild(meta)
   }, [dark])
 
   return (

@@ -202,7 +202,13 @@
   background: rgba(0, 0, 0, 0.4);
   border: 1px solid rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(14px);
-  transition: transform 0.15s ease;
+  transition: transform 0.15s ease, opacity 0.25s ease, visibility 0.25s;
+}
+
+/* hidden while the review text is expanded */
+.iv-chevron--hidden {
+  opacity: 0;
+  visibility: hidden;
 }
 
 .iv-chevron:active:not(:disabled) {

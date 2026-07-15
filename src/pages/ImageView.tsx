@@ -345,11 +345,14 @@ export default function ImageView() {
                 ))}
               </div>
 
-              {/* chevrons: step through this review's photos */}
+              {/* chevrons: step through this review's photos; tucked away
+                  while the review text is expanded */}
               {r.photos.length > 1 && (
                 <>
                   <button
-                    className="iv-chevron iv-chevron--left"
+                    className={
+                      isExpanded ? 'iv-chevron iv-chevron--left iv-chevron--hidden' : 'iv-chevron iv-chevron--left'
+                    }
                     aria-label="Previous photo"
                     disabled={pIdx === 0}
                     onClick={() => stepPhoto(i, -1)}
@@ -357,7 +360,11 @@ export default function ImageView() {
                     <img src="/assets/iv3-chevron-left.svg" width={20} height={20} alt="" />
                   </button>
                   <button
-                    className="iv-chevron iv-chevron--right"
+                    className={
+                      isExpanded
+                        ? 'iv-chevron iv-chevron--right iv-chevron--hidden'
+                        : 'iv-chevron iv-chevron--right'
+                    }
                     aria-label="Next photo"
                     disabled={pIdx === r.photos.length - 1}
                     onClick={() => stepPhoto(i, 1)}
