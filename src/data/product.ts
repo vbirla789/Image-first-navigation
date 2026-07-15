@@ -70,9 +70,7 @@ export const photoReviews: StripPhoto[] = [
 
 const reviewChips = ['Mac OS', '8 GB RAM', 'Internal Version', '256 GB', 'Dual core memory']
 
-const longReviewBody = `The display is crisp and packed with useful info time, date, world time map, alarms and yet still easy to read. It has that retro-tech aesthetic that feels intentional rather than outdated.
-One of its standout features: you can track multiple time zones easily, which is rare at this price point. Company gives around 10 years on a single battery, basically "set it and forget it. The display is crisp and packed with useful info time, date, world time map, alarms and yet still easy to read. It has that retro-tech aesthetic that feels intentional rather than outdated.
-One of its standout features: you can track multiple time zones easily, which is rare at this price point. Company gives around 10 years on a single battery, basically "set it and forget it`
+const longReviewBody = `The display is crisp and packed with useful info time, date, world time map, alarms and yet still easy to read. It has that retro-tech aesthetic that feels intentional rather than outdated. One of its standout features: you can track multiple time zones easily, which is rare at this price point. Company gives around 10 years on a single battery, basically "set it and forget it".`
 
 export const reviews: Review[] = [
   {
@@ -83,7 +81,7 @@ export const reviews: Review[] = [
     verified: true,
     fromTrustedSource: false,
     title: 'Great quality and built',
-    body: 'Really happy with this Casio new tech watch. I love the quality of this watch feels..',
+    body: 'Really happy with this Casio new tech watc..',
     fullBody:
       'Really happy with this Casio new tech watch. I love the quality of this watch! It looks stylish, feels premium, and is very comfortable to wear. Excellent value for the price.',
     boughtChips: ['Dial 42 MM', 'Silver', 'Manual'],
@@ -104,7 +102,7 @@ export const reviews: Review[] = [
     verified: false,
     fromTrustedSource: true,
     title: 'This is simply amazing!',
-    body: 'The display is crisp and packed with useful info time, date, world time ma..',
+    body: 'The display is crisp and packed with useful..',
     fullBody: longReviewBody,
     boughtChips: ['Dial 42 MM', 'Silver', 'Manual'],
     chips: reviewChips,
@@ -126,7 +124,7 @@ export const reviews: Review[] = [
     verified: true,
     fromTrustedSource: false,
     title: 'Perfect everyday watch',
-    body: 'Wears light on the wrist and the world time feature is genuinely useful for my tra..',
+    body: 'Wears light on the wrist and the world time..',
     fullBody:
       'Wears light on the wrist and the world time feature is genuinely useful for my travel between Dubai and London. The strap was easy to adjust and it looks far more expensive than it is.',
     boughtChips: ['Dial 42 MM', 'Silver', 'Manual'],
@@ -147,7 +145,7 @@ export const reviews: Review[] = [
     verified: true,
     fromTrustedSource: false,
     title: 'Solid value for money',
-    body: 'Battery is rated for 10 years and the illuminator is bright enough for night us..',
+    body: 'Battery is rated for 10 years and the illum..',
     fullBody:
       'Battery is rated for 10 years and the illuminator is bright enough for night use. The bracelet needed two links removed for my wrist but sits comfortably now. For this price nothing else comes close.',
     boughtChips: ['Dial 42 MM', 'Silver', 'Manual'],

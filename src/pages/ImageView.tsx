@@ -30,9 +30,6 @@ export default function ImageView() {
     ),
   )
   const [expanded, setExpanded] = useState(false)
-  // tap anywhere on the image toggles an immersive view: all chrome (header,
-  // product card, review block, actions) fades away so only the photo remains
-  const [chromeHidden, setChromeHidden] = useState(false)
   // FTUX: nudge that swiping down reveals other people's reviews (once per session)
   const [hintVisible, setHintVisible] = useState(() => !sessionStorage.getItem('iv-vhint-seen'))
   const vtrackRef = useRef<HTMLDivElement>(null)
@@ -115,14 +112,20 @@ export default function ImageView() {
     })
   }
 
-  /* tap on the stage (not a button, not a drag) toggles the immersive view */
-  const onStageTap = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (drag.current.moved) {
-      drag.current.moved = false
-      return
-    }
-    if ((e.target as HTMLElement).closest('button')) return
-    setChromeHidden((prev) => !prev)
+  /* chevron tap: step through the active review's photos. Snap is disabled
+     for the settle animation (same as endDrag) so Chrome's snap-target
+     memory can't yank the scroll back mid-flight. */
+  const stepPhoto = (i: number, delta: number) => {
+    const h = htracks.current[i]
+    if (!h) return
+    const target = clamp(photoIndexes[i] + delta, reviews[i].photos.length - 1)
+    if (target === photoIndexes[i]) return
+    setPhotoIndexes((prev) => prev.map((p, j) => (j === i ? target : p)))
+    h.style.scrollSnapType = 'none'
+    h.scrollTo({ left: target * h.clientWidth, behavior: 'smooth' })
+    window.setTimeout(() => {
+      h.style.scrollSnapType = ''
+    }, 600)
   }
 
   const onVScroll = () => {
@@ -300,7 +303,7 @@ export default function ImageView() {
   }
 
   return (
-    <div className={chromeHidden ? 'app-shell iv iv--clean' : 'app-shell iv'}>
+    <div className="app-shell iv">
       {/* vertical feed of full-screen review pages; each page carries its own
           horizontal photo carousel plus its copy and product tray */}
       <div
@@ -311,7 +314,6 @@ export default function ImageView() {
         onPointerMove={onPointerMove}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
-        onClick={onStageTap}
       >
         {reviews.map((r, i) => {
           const pIdx = photoIndexes[i]
@@ -343,31 +345,46 @@ export default function ImageView() {
                 ))}
               </div>
 
-              {/* top overlay: page header (close + progress bars) + product card */}
+              {/* chevrons: step through this review's photos */}
+              {r.photos.length > 1 && (
+                <>
+                  <button
+                    className="iv-chevron iv-chevron--left"
+                    aria-label="Previous photo"
+                    disabled={pIdx === 0}
+                    onClick={() => stepPhoto(i, -1)}
+                  >
+                    <img src="/assets/iv3-chevron-left.svg" width={20} height={20} alt="" />
+                  </button>
+                  <button
+                    className="iv-chevron iv-chevron--right"
+                    aria-label="Next photo"
+                    disabled={pIdx === r.photos.length - 1}
+                    onClick={() => stepPhoto(i, 1)}
+                  >
+                    <img src="/assets/iv3-chevron-right.svg" width={20} height={20} alt="" />
+                  </button>
+                </>
+              )}
+
+              {/* top overlay: single header row — close + product info + ATC */}
               <div className="iv-top">
                 <div className="iv-header">
                   <button className="iv-close" aria-label="Close" onClick={close}>
                     <img src="/assets/iv3-cross.svg" width={20} height={20} alt="" />
                   </button>
-                  <div className="iv-bars">
-                    {r.photos.map((p, bi) => (
-                      <span key={p.id} className={bi <= pIdx ? 'iv-bar' : 'iv-bar iv-bar--upcoming'} />
-                    ))}
-                  </div>
-                </div>
-                <div className="iv-product">
-                  <img className="iv-product__thumb" src={product.thumb} alt="" />
-                  <div className="iv-product__info">
-                    <p className="iv-product__name">{product.shortName}</p>
-                    <p className="iv-product__price">
+                  <img className="iv-header__thumb" src={product.thumb} alt="" />
+                  <div className="iv-header__info">
+                    <p className="iv-header__name">{product.shortName}</p>
+                    <p className="iv-header__price">
                       <b>Đ{product.price}</b> <s>{product.oldPrice}</s> <span>47%</span>
                     </p>
                   </div>
-                  <button className="iv-product__atc">Add to cart</button>
+                  <button className="iv-header__atc">Add to Cart</button>
                 </div>
               </div>
 
-              {/* bottom overlay: reviewer, stars, review copy + share/like */}
+              {/* bottom overlay: reviewer, stars, copy, then like/share + progress */}
               <div className="iv-bottom">
                 <div className="iv-user">
                   <span className="iv-avatar">{r.userName.charAt(0)}</span>
@@ -379,23 +396,9 @@ export default function ImageView() {
                     <p className="iv-user__time">{r.timeAgo}</p>
                   </div>
                 </div>
-                <div className="iv-actions">
-                  <button className="iv-action" aria-label="Share" onClick={share}>
-                    <img src="/assets/iv3-share.svg" width={24} height={24} alt="" />
-                  </button>
-                  <button className="iv-action" aria-label="Like">
-                    <img src="/assets/iv3-like.svg" width={24} height={24} alt="" />
-                  </button>
-                </div>
                 <div className="iv-stars" aria-label={`${r.rating} out of 5 stars`}>
-                  {[1, 2, 3, 4, 5].map((s) => (
-                    <img
-                      key={s}
-                      src={s <= Math.round(r.rating) ? '/assets/iv3-star.svg' : '/assets/star-22-empty.svg'}
-                      width={20}
-                      height={20}
-                      alt=""
-                    />
+                  {Array.from({ length: Math.round(r.rating) }, (_, s) => (
+                    <img key={s} src="/assets/iv3-star.svg" width={20} height={20} alt="" />
                   ))}
                 </div>
                 <h2 className="iv-review__title">{r.title}</h2>
@@ -433,6 +436,21 @@ export default function ImageView() {
                       </button>
                     </p>
                   )}
+                </div>
+                <div className="iv-bottomrow">
+                  <div className="iv-actions">
+                    <button className="iv-action" aria-label="Like">
+                      <img src="/assets/iv3-like.svg" width={24} height={24} alt="" />
+                    </button>
+                    <button className="iv-action" aria-label="Share" onClick={share}>
+                      <img src="/assets/iv3-share.svg" width={24} height={24} alt="" />
+                    </button>
+                  </div>
+                  <div className="iv-bars">
+                    {r.photos.map((p, bi) => (
+                      <span key={p.id} className={bi <= pIdx ? 'iv-bar' : 'iv-bar iv-bar--upcoming'} />
+                    ))}
+                  </div>
                 </div>
               </div>
             </section>
