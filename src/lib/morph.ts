@@ -69,16 +69,30 @@ export function useMorphReturnScroll(): void {
   }, [location.state])
 }
 
-/** Run a same-document state change inside a view transition when supported. */
+/** Run a same-document state change inside a view transition when supported.
+ * The state change must never be lost: if the transition can't start or is
+ * aborted before invoking its callback (e.g. hidden document), apply directly. */
 export function withLocalTransition(apply: () => void): void {
   const doc = document as Document & {
-    startViewTransition?: (cb: () => void) => { finished: Promise<void> }
+    startViewTransition?: (cb: () => void) => {
+      finished: Promise<void>
+      updateCallbackDone: Promise<void>
+    }
   }
-  if (doc.startViewTransition) {
-    document.documentElement.classList.add('vt-local')
-    const transition = doc.startViewTransition(apply)
-    transition.finished.finally(() => document.documentElement.classList.remove('vt-local'))
-  } else {
+  if (!doc.startViewTransition || document.visibilityState !== 'visible') {
     apply()
+    return
   }
+  document.documentElement.classList.add('vt-local')
+  let applied = false
+  const transition = doc.startViewTransition(() => {
+    applied = true
+    apply()
+  })
+  transition.updateCallbackDone.catch(() => {
+    if (!applied) apply()
+  })
+  transition.finished
+    .catch(() => {})
+    .finally(() => document.documentElement.classList.remove('vt-local'))
 }

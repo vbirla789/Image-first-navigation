@@ -19,8 +19,8 @@ export interface Review {
   title: string
   body: string
   fullBody: string
-  /** "Size bought" chip shown in the expanded image-first review */
-  sizeBought?: string
+  /** "Bought:" variant chips shown in the expanded image-first review */
+  boughtChips?: string[]
   chips: string[]
   variantInfo: string
   photos: ReviewPhoto[]
@@ -77,16 +77,16 @@ One of its standout features: you can track multiple time zones easily, which is
 export const reviews: Review[] = [
   {
     id: 'r1',
-    userName: 'Aditya Birla',
-    rating: 5,
+    userName: 'Ayaneshu Bhardwaj',
+    rating: 4,
     timeAgo: '4 month ago',
     verified: true,
     fromTrustedSource: false,
     title: 'Great quality and built',
-    body: 'Really happy with this Casio new tech watch. I love the quality of this watch! It looks stylish, feels..',
+    body: 'Really happy with this Casio new tech watch. I love the quality of this watch feels..',
     fullBody:
       'Really happy with this Casio new tech watch. I love the quality of this watch! It looks stylish, feels premium, and is very comfortable to wear. Excellent value for the price.',
-    sizeBought: 'XXL',
+    boughtChips: ['Dial 42 MM', 'Silver', 'Manual'],
     chips: reviewChips,
     variantInfo: 'Bought 42 mm, Silver, Manual',
     photos: [
@@ -104,9 +104,9 @@ export const reviews: Review[] = [
     verified: false,
     fromTrustedSource: true,
     title: 'This is simply amazing!',
-    body: 'The display is crisp and packed with useful info time, date, world time map, alarms and yet still ea..',
+    body: 'The display is crisp and packed with useful info time, date, world time ma..',
     fullBody: longReviewBody,
-    sizeBought: '42 mm',
+    boughtChips: ['Dial 42 MM', 'Silver', 'Manual'],
     chips: reviewChips,
     variantInfo: 'Bought 42 mm, Silver, Manual',
     photos: [
