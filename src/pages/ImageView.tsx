@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { photoReviews, product, reviews } from '../data/product'
-import { MORPH_NAME, claimMorph, getMorphSource, setMorphSource, withLocalTransition } from '../lib/morph'
+import { MORPH_NAME, claimMorph, getMorphSource, setMorphSource } from '../lib/morph'
 import './ImageView.css'
 
 function initialReviewIndex(reviewId: string | null): number {
@@ -30,6 +30,8 @@ export default function ImageView() {
     ),
   )
   const [expanded, setExpanded] = useState(false)
+  // FTUX: nudge that swiping down reveals other people's reviews (once per session)
+  const [hintVisible, setHintVisible] = useState(() => !sessionStorage.getItem('iv-vhint-seen'))
   const vtrackRef = useRef<HTMLDivElement>(null)
   const htracks = useRef<(HTMLDivElement | null)[]>([])
   const drag = useRef({
@@ -102,6 +104,13 @@ export default function ImageView() {
     setExpanded(false)
   }
 
+  const dismissHint = () => {
+    setHintVisible((visible) => {
+      if (visible) sessionStorage.setItem('iv-vhint-seen', '1')
+      return false
+    })
+  }
+
   const onVScroll = () => {
     if (drag.current.active || Date.now() - resizedAt.current < 300) return
     window.clearTimeout(vTimer.current)
@@ -140,6 +149,7 @@ export default function ImageView() {
   /* mouse drag-to-swipe (touch is native via scroll-snap): the gesture locks
      to its dominant axis — horizontal flips photos, vertical flips reviews */
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    dismissHint()
     if (e.pointerType !== 'mouse') return
     if ((e.target as HTMLElement).closest('button')) return
     const v = vtrackRef.current
@@ -216,10 +226,28 @@ export default function ImageView() {
     }, 600)
   }
 
-  /* expand / collapse inside a view transition so the gradient and text
-     morph instead of jumping */
+  /* expand / collapse with an animated height change — the copy block (and
+     the gradient overlay above it) grows/shrinks instead of jumping */
+  const collapseRefs = useRef<(HTMLDivElement | null)[]>([])
   const toggleExpanded = (next: boolean) => {
-    withLocalTransition(() => flushSync(() => setExpanded(next)))
+    const el = collapseRefs.current[activeRef.current]
+    if (!el) {
+      setExpanded(next)
+      return
+    }
+    const from = el.offsetHeight
+    flushSync(() => setExpanded(next))
+    const to = el.offsetHeight
+    if (from !== to) {
+      el.style.overflow = 'hidden'
+      const anim = el.animate([{ height: `${from}px` }, { height: `${to}px` }], {
+        duration: 320,
+        easing: 'cubic-bezier(0.22, 0.9, 0.26, 1)',
+      })
+      anim.onfinish = () => {
+        el.style.overflow = ''
+      }
+    }
   }
 
   const share = async () => {
@@ -354,39 +382,53 @@ export default function ImageView() {
                   ))}
                 </div>
                 <h2 className="iv-review__title">{r.title}</h2>
-                {isExpanded ? (
-                  <>
-                    <p className="iv-review__body">{r.fullBody}</p>
-                    {r.boughtChips && (
-                      <div className="iv-bought">
-                        <span className="iv-bought__label">Bought:</span>
-                        {r.boughtChips.map((chip) => (
-                          <span key={chip} className="iv-bought__chip">
-                            {chip}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    <button
-                      className="iv-review__toggle iv-review__toggle--less"
-                      onClick={() => toggleExpanded(false)}
-                    >
-                      show less
-                    </button>
-                  </>
-                ) : (
-                  <p className="iv-review__body">
-                    {r.body}.{' '}
-                    <button className="iv-review__toggle" onClick={() => toggleExpanded(true)}>
-                      show more
-                    </button>
-                  </p>
-                )}
+                <div
+                  className="iv-collapse"
+                  ref={(el) => {
+                    collapseRefs.current[i] = el
+                  }}
+                >
+                  {isExpanded ? (
+                    <>
+                      <p className="iv-review__body">{r.fullBody}</p>
+                      {r.boughtChips && (
+                        <div className="iv-bought">
+                          <span className="iv-bought__label">Bought:</span>
+                          {r.boughtChips.map((chip) => (
+                            <span key={chip} className="iv-bought__chip">
+                              {chip}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <button
+                        className="iv-review__toggle iv-review__toggle--less"
+                        onClick={() => toggleExpanded(false)}
+                      >
+                        show less
+                      </button>
+                    </>
+                  ) : (
+                    <p className="iv-review__body">
+                      {r.body}.{' '}
+                      <button className="iv-review__toggle" onClick={() => toggleExpanded(true)}>
+                        show more
+                      </button>
+                    </p>
+                  )}
+                </div>
               </div>
             </section>
           )
         })}
       </div>
+
+      {/* FTUX: swipe-down affordance — scroll to see other people's reviews */}
+      {hintVisible && (
+        <div className="iv-vhint" aria-hidden>
+          <img src="/assets/iv3-hand-vscroll.svg" width={68} height={94} alt="" />
+        </div>
+      )}
     </div>
   )
 }

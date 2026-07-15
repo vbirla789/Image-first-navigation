@@ -15,6 +15,7 @@
   scroll-snap-type: y mandatory;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .iv-vtrack::-webkit-scrollbar {
@@ -42,6 +43,7 @@
   scroll-snap-type: x mandatory;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
   cursor: grab;
 }
 
@@ -324,9 +326,15 @@
   text-overflow: ellipsis;
 }
 
+/* collapsible copy — height-animated on show more/less; spacing lives on the
+   wrapper so toggling overflow during the animation doesn't shift margins */
+.iv-collapse {
+  width: 100%;
+  margin-top: 6px;
+}
+
 /* wraps to two lines collapsed, with "show more" flowing inline at the end */
 .iv-review__body {
-  margin-top: 6px;
   width: calc(100% - 52px);
   font-size: 14px;
   letter-spacing: -0.1px;
@@ -376,4 +384,45 @@
   line-height: 20px;
   color: #ffffff;
   white-space: nowrap;
+}
+
+/* content swapped in by show more/less fades in under the height animation */
+.iv-bought,
+.iv-review__toggle--less {
+  animation: iv-fade-in 0.3s ease both;
+}
+
+@keyframes iv-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ---------- FTUX: swipe-down hint ---------- */
+.iv-vhint {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  pointer-events: none;
+  z-index: 5;
+  animation: iv-vhint-bob 2s ease-in-out infinite;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.35));
+}
+
+@keyframes iv-vhint-bob {
+  0%,
+  100% {
+    opacity: 0;
+    transform: translate(-50%, 20px);
+  }
+  25%,
+  70% {
+    opacity: 1;
+  }
+  50% {
+    transform: translate(-50%, -22px);
+  }
 }
