@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import './PhoneFrame.css'
 
@@ -8,8 +9,15 @@ import './PhoneFrame.css'
  */
 export default function PhoneFrame() {
   const dark = useLocation().pathname.startsWith('/image-view')
+
+  // color the real browser chrome (iOS status bar area) to match the route
+  useEffect(() => {
+    const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
+    if (meta) meta.content = dark ? '#000000' : '#ffffff'
+  }, [dark])
+
   return (
-    <div className="phone-stage">
+    <div className={dark ? 'phone-stage phone-stage--dark' : 'phone-stage'}>
       <div className={dark ? 'phone-shell phone-shell--dark' : 'phone-shell'}>
         <div className="phone-status">
           <span className="phone-status__time">9:41</span>

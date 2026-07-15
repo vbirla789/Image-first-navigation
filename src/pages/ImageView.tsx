@@ -367,23 +367,6 @@ export default function ImageView() {
                 </>
               )}
 
-              {/* top overlay: single header row — close + product info + ATC */}
-              <div className="iv-top">
-                <div className="iv-header">
-                  <button className="iv-close" aria-label="Close" onClick={close}>
-                    <img src="/assets/iv3-cross.svg" width={20} height={20} alt="" />
-                  </button>
-                  <img className="iv-header__thumb" src={product.thumb} alt="" />
-                  <div className="iv-header__info">
-                    <p className="iv-header__name">{product.shortName}</p>
-                    <p className="iv-header__price">
-                      <b>Đ{product.price}</b> <s>{product.oldPrice}</s> <span>47%</span>
-                    </p>
-                  </div>
-                  <button className="iv-header__atc">Add to Cart</button>
-                </div>
-              </div>
-
               {/* bottom overlay: reviewer, stars, copy, then like/share + progress */}
               <div className="iv-bottom">
                 <div className="iv-user">
@@ -456,6 +439,24 @@ export default function ImageView() {
             </section>
           )
         })}
+      </div>
+
+      {/* sticky top overlay: close + product info + ATC — identical for every
+          review, so it stays put while the feed scrolls underneath */}
+      <div className="iv-top">
+        <div className="iv-header">
+          <button className="iv-close" aria-label="Close" onClick={close}>
+            <img src="/assets/iv3-cross.svg" width={20} height={20} alt="" />
+          </button>
+          <img className="iv-header__thumb" src={product.thumb} alt="" />
+          <div className="iv-header__info">
+            <p className="iv-header__name">{product.shortName}</p>
+            <p className="iv-header__price">
+              <b>Đ{product.price}</b> <s>{product.oldPrice}</s> <span>47%</span>
+            </p>
+          </div>
+          <button className="iv-header__atc">Add to Cart</button>
+        </div>
       </div>
 
       {/* FTUX: swipe-down affordance — scroll to see other people's reviews */}
