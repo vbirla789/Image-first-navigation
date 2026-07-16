@@ -30,8 +30,6 @@ export default function ImageView() {
     ),
   )
   const [expanded, setExpanded] = useState(false)
-  // FTUX: nudge that swiping down reveals other people's reviews (once per session)
-  const [hintVisible, setHintVisible] = useState(() => !sessionStorage.getItem('iv-vhint-seen'))
   const vtrackRef = useRef<HTMLDivElement>(null)
   const htracks = useRef<(HTMLDivElement | null)[]>([])
   const drag = useRef({
@@ -105,29 +103,6 @@ export default function ImageView() {
     setExpanded(false)
   }
 
-  const dismissHint = () => {
-    setHintVisible((visible) => {
-      if (visible) sessionStorage.setItem('iv-vhint-seen', '1')
-      return false
-    })
-  }
-
-  /* chevron tap: step through the active review's photos. Snap is disabled
-     for the settle animation (same as endDrag) so Chrome's snap-target
-     memory can't yank the scroll back mid-flight. */
-  const stepPhoto = (i: number, delta: number) => {
-    const h = htracks.current[i]
-    if (!h) return
-    const target = clamp(photoIndexes[i] + delta, reviews[i].photos.length - 1)
-    if (target === photoIndexes[i]) return
-    setPhotoIndexes((prev) => prev.map((p, j) => (j === i ? target : p)))
-    h.style.scrollSnapType = 'none'
-    h.scrollTo({ left: target * h.clientWidth, behavior: 'smooth' })
-    window.setTimeout(() => {
-      h.style.scrollSnapType = ''
-    }, 600)
-  }
-
   const onVScroll = () => {
     if (drag.current.active || Date.now() - resizedAt.current < 300) return
     window.clearTimeout(vTimer.current)
@@ -166,7 +141,6 @@ export default function ImageView() {
   /* mouse drag-to-swipe (touch is native via scroll-snap): the gesture locks
      to its dominant axis — horizontal flips photos, vertical flips reviews */
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    dismissHint()
     if (e.pointerType !== 'mouse') return
     if ((e.target as HTMLElement).closest('button')) return
     const v = vtrackRef.current
@@ -345,101 +319,82 @@ export default function ImageView() {
                 ))}
               </div>
 
-              {/* chevrons: step through this review's photos; tucked away
-                  while the review text is expanded */}
-              {r.photos.length > 1 && (
-                <>
-                  <button
-                    className={
-                      isExpanded ? 'iv-chevron iv-chevron--left iv-chevron--hidden' : 'iv-chevron iv-chevron--left'
-                    }
-                    aria-label="Previous photo"
-                    disabled={pIdx === 0}
-                    onClick={() => stepPhoto(i, -1)}
-                  >
-                    <img src="/assets/iv3-chevron-left.svg" width={20} height={20} alt="" />
-                  </button>
-                  <button
-                    className={
-                      isExpanded
-                        ? 'iv-chevron iv-chevron--right iv-chevron--hidden'
-                        : 'iv-chevron iv-chevron--right'
-                    }
-                    aria-label="Next photo"
-                    disabled={pIdx === r.photos.length - 1}
-                    onClick={() => stepPhoto(i, 1)}
-                  >
-                    <img src="/assets/iv3-chevron-right.svg" width={20} height={20} alt="" />
-                  </button>
-                </>
-              )}
-
-              {/* bottom overlay: reviewer, stars, copy, then like/share + progress */}
+              {/* bottom stack: dots pager over the image + solid review panel */}
               <div className="iv-bottom">
-                <div className="iv-user">
-                  <span className="iv-avatar">{r.userName.charAt(0)}</span>
-                  <div className="iv-user__text">
-                    <p className="iv-user__name">
-                      {r.userName}
-                      <img src="/assets/iv-check.svg" width={16} height={16} alt="Verified" />
-                    </p>
-                    <p className="iv-user__time">{r.timeAgo}</p>
+                {r.photos.length > 1 && (
+                  <div className={isExpanded ? 'iv-dots iv-dots--hidden' : 'iv-dots'} aria-hidden>
+                    {r.photos.map((p, di) => (
+                      <span key={p.id} className={di === pIdx ? 'iv-dot iv-dot--active' : 'iv-dot'} />
+                    ))}
                   </div>
-                </div>
-                <div className="iv-stars" aria-label={`${r.rating} out of 5 stars`}>
-                  {Array.from({ length: Math.round(r.rating) }, (_, s) => (
-                    <img key={s} src="/assets/iv3-star.svg" width={20} height={20} alt="" />
-                  ))}
-                </div>
-                <h2 className="iv-review__title">{r.title}</h2>
-                <div
-                  className="iv-collapse"
-                  ref={(el) => {
-                    collapseRefs.current[i] = el
-                  }}
-                >
-                  {isExpanded ? (
-                    <>
-                      <p className="iv-review__body">{r.fullBody}</p>
-                      {r.boughtChips && (
-                        <div className="iv-bought">
-                          <span className="iv-bought__label">Bought:</span>
-                          {r.boughtChips.map((chip) => (
-                            <span key={chip} className="iv-bought__chip">
-                              {chip}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      <button
-                        className="iv-review__toggle iv-review__toggle--less"
-                        onClick={() => toggleExpanded(false)}
-                      >
-                        show less
-                      </button>
-                    </>
-                  ) : (
-                    <p className="iv-review__body">
-                      {r.body}.{' '}
-                      <button className="iv-review__toggle" onClick={() => toggleExpanded(true)}>
-                        show more
-                      </button>
+                )}
+                <div className="iv-panel">
+                  <div className="iv-panel__titlerow">
+                    <span className={r.rating >= 3 ? 'iv-pill iv-pill--positive' : 'iv-pill iv-pill--negative'}>
+                      {r.rating}
+                      <img src="/assets/iv-star-white.svg" width={12} height={12} alt="" />
+                    </span>
+                    <h2 className="iv-review__title">{r.title}</h2>
+                  </div>
+                  <div
+                    className="iv-collapse"
+                    ref={(el) => {
+                      collapseRefs.current[i] = el
+                    }}
+                  >
+                    {isExpanded ? (
+                      <>
+                        <p className="iv-review__body">{r.fullBody}</p>
+                        {r.boughtChips && (
+                          <p className="iv-bought">
+                            <span className="iv-bought__label">Bought:</span>
+                            {r.boughtChips.map((chip) => (
+                              <span key={chip} className="iv-bought__value">
+                                {chip}
+                              </span>
+                            ))}
+                          </p>
+                        )}
+                        <button className="iv-review__toggle" onClick={() => toggleExpanded(false)}>
+                          show less
+                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
+                            <path
+                              d="M2.5 7.5L6 4l3.5 3.5"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <p className="iv-review__body iv-review__body--clamp">{r.fullBody}</p>
+                        <button className="iv-review__toggle" onClick={() => toggleExpanded(true)}>
+                          show more
+                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
+                            <path
+                              d="M2.5 4.5L6 8l3.5-3.5"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        </button>
+                      </>
+                    )}
+                  </div>
+                  <div className="iv-panel__footer">
+                    <p className="iv-panel__reviewer">
+                      {r.userName}
+                      <img src="/assets/iv-check.svg" width={14} height={14} alt="Verified" />
+                      <span>· {r.timeAgo}</span>
                     </p>
-                  )}
-                </div>
-                <div className="iv-bottomrow">
-                  <div className="iv-actions">
                     <button className="iv-action" aria-label="Like">
                       <img src="/assets/iv3-like.svg" width={24} height={24} alt="" />
                     </button>
-                    <button className="iv-action" aria-label="Share" onClick={share}>
-                      <img src="/assets/iv3-share.svg" width={24} height={24} alt="" />
-                    </button>
-                  </div>
-                  <div className="iv-bars">
-                    {r.photos.map((p, bi) => (
-                      <span key={p.id} className={bi <= pIdx ? 'iv-bar' : 'iv-bar iv-bar--upcoming'} />
-                    ))}
                   </div>
                 </div>
               </div>
@@ -448,30 +403,27 @@ export default function ImageView() {
         })}
       </div>
 
-      {/* sticky top overlay: close + product info + ATC — identical for every
-          review, so it stays put while the feed scrolls underneath */}
+      {/* sticky top overlay: close/share row + the centered product capsule —
+          identical for every review, stays put while the feed scrolls */}
       <div className="iv-top">
         <div className="iv-header">
           <button className="iv-close" aria-label="Close" onClick={close}>
             <img src="/assets/iv3-cross.svg" width={20} height={20} alt="" />
           </button>
-          <img className="iv-header__thumb" src={product.thumb} alt="" />
-          <div className="iv-header__info">
-            <p className="iv-header__name">{product.shortName}</p>
-            <p className="iv-header__price">
-              <b>Đ{product.price}</b> <s>{product.oldPrice}</s> <span>47%</span>
-            </p>
-          </div>
-          <button className="iv-header__atc">Add to Cart</button>
+          <button className="iv-close" aria-label="Share" onClick={share}>
+            <img src="/assets/iv3-share.svg" width={20} height={20} alt="" />
+          </button>
+        </div>
+        <div className="iv-capsule">
+          <img className="iv-capsule__thumb" src={product.thumb} alt="" />
+          <span className="iv-capsule__price">
+            <b>Đ{product.price}</b>
+            <s>{product.oldPrice}</s>
+          </span>
+          <button className="iv-capsule__atc">Add to Cart</button>
         </div>
       </div>
 
-      {/* FTUX: swipe-down affordance — scroll to see other people's reviews */}
-      {hintVisible && (
-        <div className="iv-vhint" aria-hidden>
-          <img src="/assets/iv3-hand-vscroll.svg" width={68} height={94} alt="" />
-        </div>
-      )}
     </div>
   )
 }
