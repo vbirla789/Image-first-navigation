@@ -37,8 +37,6 @@ export default function ImageView() {
     ),
   )
   const [expanded, setExpanded] = useState(false)
-  // FTUX: nudge that swiping up reveals other people's reviews (once per session)
-  const [hintVisible, setHintVisible] = useState(() => !sessionStorage.getItem('iv-vhint-seen'))
   const vtrackRef = useRef<HTMLDivElement>(null)
   const htracks = useRef<(HTMLDivElement | null)[]>([])
   const drag = useRef({
@@ -125,13 +123,6 @@ export default function ImageView() {
     setActiveReview(idx)
     setExpanded(false)
     expandedRef.current = false
-  }
-
-  const dismissHint = () => {
-    setHintVisible((visible) => {
-      if (visible) sessionStorage.setItem('iv-vhint-seen', '1')
-      return false
-    })
   }
 
   /* jump interaction: after 5s without activity, the card below nudges up
@@ -226,7 +217,6 @@ export default function ImageView() {
   /* mouse drag-to-swipe (touch is native via scroll-snap): the gesture locks
      to its dominant axis — horizontal flips photos, vertical flips cards */
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    dismissHint()
     armIdleJump()
     if (e.pointerType !== 'mouse') return
     if ((e.target as HTMLElement).closest('button')) return
@@ -507,15 +497,6 @@ export default function ImageView() {
           )
         })}
       </div>
-
-      {/* FTUX: dimmed overlay with a swipe-up nudge (once per session) */}
-      {hintVisible && (
-        <div className="iv-vhint" aria-hidden>
-          <img className="iv-vhint__trail" src="/assets/iv5-swipe-trail.svg" width={51} height={156} alt="" />
-          <img className="iv-vhint__hand" src="/assets/iv5-hand-tap.svg" width={120} height={120} alt="" />
-          <p className="iv-vhint__label">Swipe up to see more</p>
-        </div>
-      )}
     </div>
   )
 }
