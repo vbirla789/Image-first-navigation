@@ -349,9 +349,6 @@
   flex-direction: column;
   align-items: center;
   gap: 16px;
-  -webkit-backdrop-filter: blur(4px);
-  backdrop-filter: blur(4px);
-  border-radius: 9999px;
 }
 
 .iv-rail__btn {
