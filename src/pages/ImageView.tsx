@@ -12,12 +12,19 @@ function initialReviewIndex(reviewId: string | null): number {
 
 const clamp = (v: number, max: number) => Math.max(0, Math.min(max, v))
 
+const initials = (name: string) =>
+  name
+    .split(' ')
+    .slice(0, 2)
+    .map((part) => part.charAt(0))
+    .join('')
+
 /**
- * Image-first view ("Single Review") — reached by tapping any review photo
- * on the PDP or PRP. Feed-style navigation:
- *  - horizontal swipe → other photos of the SAME review (copy and product
- *    tray stay put, progress bars in the header track the position)
- *  - vertical swipe → next/previous reviewer, full-screen snap like reels
+ * Image-first view ("Approach 3") — a vertical feed of rounded review cards,
+ * reached by tapping any review photo on the PDP or PRP.
+ *  - vertical swipe → next/previous reviewer's card (the next card peeks in
+ *    below), full-card snap
+ *  - horizontal swipe → other photos of the SAME review (dots track position)
  */
 export default function ImageView() {
   const navigate = useNavigate()
@@ -30,6 +37,8 @@ export default function ImageView() {
     ),
   )
   const [expanded, setExpanded] = useState(false)
+  // FTUX: nudge that swiping up reveals other people's reviews (once per session)
+  const [hintVisible, setHintVisible] = useState(() => !sessionStorage.getItem('iv-vhint-seen'))
   const vtrackRef = useRef<HTMLDivElement>(null)
   const htracks = useRef<(HTMLDivElement | null)[]>([])
   const drag = useRef({
@@ -50,6 +59,19 @@ export default function ImageView() {
      (snap-target memory). At close time it's claimed imperatively instead. */
   const morphTarget = useRef({ review: activeReview, photo: photoIndexes[activeReview] })
 
+  // vertical distance between consecutive cards (card height + gap)
+  const vStep = (v: HTMLDivElement) => {
+    const kids = v.children
+    if (kids.length > 1) {
+      return (kids[1] as HTMLElement).offsetTop - (kids[0] as HTMLElement).offsetTop
+    }
+    return v.clientHeight
+  }
+  const cardTop = (v: HTMLDivElement, i: number) => {
+    const kid = v.children[i] as HTMLElement | undefined
+    return kid ? kid.offsetTop : i * vStep(v)
+  }
+
   // position both axes on the entry review/photo (before paint; snap disabled
   // so Chrome doesn't animate the initial jump)
   useLayoutEffect(() => {
@@ -59,7 +81,7 @@ export default function ImageView() {
     v.style.scrollSnapType = 'none'
     if (h) h.style.scrollSnapType = 'none'
     const position = () => {
-      v.scrollTop = activeReview * v.clientHeight
+      v.scrollTop = cardTop(v, activeReview)
       if (h) h.scrollLeft = photoIndexes[activeReview] * h.clientWidth
     }
     position()
@@ -81,7 +103,7 @@ export default function ImageView() {
     const onResize = () => {
       resizedAt.current = Date.now()
       const v = vtrackRef.current
-      if (v) v.scrollTop = activeReview * v.clientHeight
+      if (v) v.scrollTop = cardTop(v, activeReview)
       const h = htracks.current[activeReview]
       if (h) h.scrollLeft = photoIndexes[activeReview] * h.clientWidth
     }
@@ -96,28 +118,91 @@ export default function ImageView() {
   const vTimer = useRef(0)
   const hTimers = useRef<number[]>([])
 
+  const expandedRef = useRef(false)
   const setReview = (idx: number) => {
     if (idx === activeRef.current) return
     activeRef.current = idx
     setActiveReview(idx)
     setExpanded(false)
+    expandedRef.current = false
   }
 
+  const dismissHint = () => {
+    setHintVisible((visible) => {
+      if (visible) sessionStorage.setItem('iv-vhint-seen', '1')
+      return false
+    })
+  }
+
+  /* jump interaction: after 5s without activity, the card below nudges up
+     into view and settles back — an affordance that there's more to swipe */
+  const idleTimer = useRef(0)
+  const jumping = useRef(false)
+
+  const runJump = () => {
+    const v = vtrackRef.current
+    // skip while interacting, reading an expanded review, or on the last card
+    if (!v || drag.current.active || expandedRef.current || activeRef.current >= reviews.length - 1) {
+      armIdleJump()
+      return
+    }
+    jumping.current = true
+    v.style.scrollSnapType = 'none'
+    const from = v.scrollTop
+    const peek = 72
+    const up = 420 // ms rise
+    const hold = 160
+    const down = 420
+    const easeOut = (t: number) => 1 - Math.pow(1 - t, 3)
+    const start = performance.now()
+    const tick = (now: number) => {
+      const t = now - start
+      if (t < up) {
+        v.scrollTop = from + peek * easeOut(t / up)
+      } else if (t < up + hold) {
+        v.scrollTop = from + peek
+      } else if (t < up + hold + down) {
+        v.scrollTop = from + peek * (1 - easeOut((t - up - hold) / down))
+      } else {
+        v.scrollTop = from
+        v.style.scrollSnapType = ''
+        jumping.current = false
+        armIdleJump()
+        return
+      }
+      requestAnimationFrame(tick)
+    }
+    requestAnimationFrame(tick)
+  }
+
+  const armIdleJump = () => {
+    window.clearTimeout(idleTimer.current)
+    idleTimer.current = window.setTimeout(runJump, 5000)
+  }
+
+  useEffect(() => {
+    armIdleJump()
+    return () => window.clearTimeout(idleTimer.current)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const onVScroll = () => {
-    if (drag.current.active || Date.now() - resizedAt.current < 300) return
+    if (drag.current.active || jumping.current || Date.now() - resizedAt.current < 300) return
+    armIdleJump()
     window.clearTimeout(vTimer.current)
     vTimer.current = window.setTimeout(() => {
       const v = vtrackRef.current
-      if (!v || drag.current.active) return
-      const idx = Math.round(v.scrollTop / v.clientHeight)
+      if (!v || drag.current.active || jumping.current) return
+      const idx = Math.round(v.scrollTop / vStep(v))
       if (idx >= 0 && idx < reviews.length) setReview(idx)
     }, 90)
   }
 
   const onHScroll = (i: number) => {
-    // only the on-screen page can move its cursor — Chrome sometimes re-snaps
+    // only the on-screen card can move its cursor — Chrome sometimes re-snaps
     // offscreen nested snap containers to 0, which must not clobber state
     if (drag.current.active || i !== activeRef.current || Date.now() - resizedAt.current < 300) return
+    armIdleJump()
     window.clearTimeout(hTimers.current[i])
     hTimers.current[i] = window.setTimeout(() => {
       const h = htracks.current[i]
@@ -128,7 +213,7 @@ export default function ImageView() {
   }
 
   // when the active review changes, re-align every photo carousel with its
-  // remembered cursor (undoes any spurious browser re-snap of offscreen pages)
+  // remembered cursor (undoes any spurious browser re-snap of offscreen cards)
   useEffect(() => {
     htracks.current.forEach((h, i) => {
       if (!h) return
@@ -139,8 +224,10 @@ export default function ImageView() {
   }, [activeReview])
 
   /* mouse drag-to-swipe (touch is native via scroll-snap): the gesture locks
-     to its dominant axis — horizontal flips photos, vertical flips reviews */
+     to its dominant axis — horizontal flips photos, vertical flips cards */
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    dismissHint()
+    armIdleJump()
     if (e.pointerType !== 'mouse') return
     if ((e.target as HTMLElement).closest('button')) return
     const v = vtrackRef.current
@@ -203,13 +290,13 @@ export default function ImageView() {
       setPhotoIndexes((prev) => prev.map((p, j) => (j === activeReview ? target : p)))
       h.scrollTo({ left: target * h.clientWidth, behavior: 'smooth' })
     } else if (drag.current.axis === 'v' && v) {
-      const raw = v.scrollTop / v.clientHeight
+      const raw = v.scrollTop / vStep(v)
       const target = clamp(
         Math.abs(dy) > 40 ? (dy < 0 ? Math.ceil(raw) : Math.floor(raw)) : Math.round(raw),
         reviews.length - 1,
       )
       setReview(target)
-      v.scrollTo({ top: target * v.clientHeight, behavior: 'smooth' })
+      v.scrollTo({ top: cardTop(v, target), behavior: 'smooth' })
     }
     // keep snap disabled until the settle animation is fully done — re-enabling
     // mid-scroll lets Chrome re-snap to the previous slide
@@ -219,15 +306,17 @@ export default function ImageView() {
     }, 600)
   }
 
-  /* expand / collapse with an animated height change — the copy block (and
-     the gradient overlay above it) grows/shrinks instead of jumping */
+  /* expand / collapse with an animated height change */
   const collapseRefs = useRef<(HTMLDivElement | null)[]>([])
   const toggleExpanded = (next: boolean) => {
     const el = collapseRefs.current[activeRef.current]
     if (!el) {
+      expandedRef.current = next
       setExpanded(next)
       return
     }
+    expandedRef.current = next
+    armIdleJump()
     const from = el.offsetHeight
     flushSync(() => setExpanded(next))
     const to = el.offsetHeight
@@ -278,10 +367,9 @@ export default function ImageView() {
 
   return (
     <div className="app-shell iv">
-      {/* vertical feed of full-screen review pages; each page carries its own
-          horizontal photo carousel plus its copy and product tray */}
+      {/* vertical feed of rounded review cards; the next card peeks in below */}
       <div
-        className="iv-vtrack"
+        className="iv-feed"
         ref={vtrackRef}
         onScroll={onVScroll}
         onPointerDown={onPointerDown}
@@ -294,7 +382,12 @@ export default function ImageView() {
           const isActive = i === activeReview
           const isExpanded = isActive && expanded
           return (
-            <section key={r.id} className="iv-page">
+            <section key={r.id} className="iv-card">
+              {/* blurred backdrop of the current photo behind the contained one */}
+              <img className="iv-card__bg" src={r.photos[pIdx].src} alt="" draggable={false} />
+              <div className="iv-card__scrim" />
+
+              {/* horizontal photo carousel */}
               <div
                 className="iv-htrack"
                 ref={(el) => {
@@ -319,8 +412,23 @@ export default function ImageView() {
                 ))}
               </div>
 
-              {/* bottom stack: dots pager over the image + solid review panel */}
-              <div className="iv-bottom">
+              {/* card header: reviewer identity + close */}
+              <div className="iv-card__header">
+                <span className="iv-avatar">{initials(r.userName)}</span>
+                <div className="iv-card__user">
+                  <p className="iv-card__name">
+                    {r.userName}
+                    <img src="/assets/iv-check.svg" width={16} height={16} alt="Verified" />
+                  </p>
+                  <p className="iv-card__time">{r.timeAgo}</p>
+                </div>
+                <button className="iv-card__close" aria-label="Close" onClick={close}>
+                  <img src="/assets/iv5-cross.svg" width={15} height={15} alt="" />
+                </button>
+              </div>
+
+              {/* bottom overlay: dots, review copy + action rail, ATC */}
+              <div className="iv-card__bottom">
                 {r.photos.length > 1 && (
                   <div className={isExpanded ? 'iv-dots iv-dots--hidden' : 'iv-dots'} aria-hidden>
                     {r.photos.map((p, di) => (
@@ -328,74 +436,74 @@ export default function ImageView() {
                     ))}
                   </div>
                 )}
-                <div className="iv-panel">
-                  <div className="iv-panel__titlerow">
-                    <span className={r.rating >= 3 ? 'iv-pill iv-pill--positive' : 'iv-pill iv-pill--negative'}>
-                      {r.rating}
-                      <img src="/assets/iv-star-white.svg" width={12} height={12} alt="" />
-                    </span>
-                    <h2 className="iv-review__title">{r.title}</h2>
+                <div className="iv-card__row">
+                  <div className="iv-card__copy">
+                    <div className="iv-card__titlerow">
+                      <span className={r.rating >= 3 ? 'iv-pill iv-pill--positive' : 'iv-pill iv-pill--negative'}>
+                        {r.rating}
+                        <img src="/assets/iv-star-white.svg" width={12} height={12} alt="" />
+                      </span>
+                      <h2 className="iv-card__title">{r.title}</h2>
+                    </div>
+                    <div
+                      className="iv-collapse"
+                      ref={(el) => {
+                        collapseRefs.current[i] = el
+                      }}
+                    >
+                      {isExpanded ? (
+                        <>
+                          <p className="iv-card__body">{r.fullBody}</p>
+                          {r.boughtChips && (
+                            <p className="iv-bought">
+                              <span className="iv-bought__label">Bought:</span>
+                              {r.boughtChips.map((chip) => (
+                                <span key={chip} className="iv-bought__value">
+                                  {chip}
+                                </span>
+                              ))}
+                            </p>
+                          )}
+                          <button className="iv-card__toggle" onClick={() => toggleExpanded(false)}>
+                            show less
+                            <img className="iv-card__toggle-flip" src="/assets/iv5-chevron-down.svg" width={16} height={16} alt="" />
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <p className="iv-card__body iv-card__body--clamp">{r.fullBody}</p>
+                          <button className="iv-card__toggle" onClick={() => toggleExpanded(true)}>
+                            show more
+                            <img src="/assets/iv5-chevron-down.svg" width={16} height={16} alt="" />
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
-                  <div
-                    className="iv-collapse"
-                    ref={(el) => {
-                      collapseRefs.current[i] = el
-                    }}
-                  >
-                    {isExpanded ? (
-                      <>
-                        <p className="iv-review__body">{r.fullBody}</p>
-                        {r.boughtChips && (
-                          <p className="iv-bought">
-                            <span className="iv-bought__label">Bought:</span>
-                            {r.boughtChips.map((chip) => (
-                              <span key={chip} className="iv-bought__value">
-                                {chip}
-                              </span>
-                            ))}
-                          </p>
-                        )}
-                        <button className="iv-review__toggle" onClick={() => toggleExpanded(false)}>
-                          show less
-                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
-                            <path
-                              d="M2.5 7.5L6 4l3.5 3.5"
-                              stroke="currentColor"
-                              strokeWidth="1.5"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <p className="iv-review__body iv-review__body--clamp">{r.fullBody}</p>
-                        <button className="iv-review__toggle" onClick={() => toggleExpanded(true)}>
-                          show more
-                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
-                            <path
-                              d="M2.5 4.5L6 8l3.5-3.5"
-                              stroke="currentColor"
-                              strokeWidth="1.5"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        </button>
-                      </>
-                    )}
-                  </div>
-                  <div className="iv-panel__footer">
-                    <p className="iv-panel__reviewer">
-                      {r.userName}
-                      <img src="/assets/iv-check.svg" width={14} height={14} alt="Verified" />
-                      <span>· {r.timeAgo}</span>
-                    </p>
-                    <button className="iv-action" aria-label="Like">
-                      <img src="/assets/iv3-like.svg" width={24} height={24} alt="" />
+                  <div className="iv-rail">
+                    <button className="iv-rail__btn" aria-label="Like">
+                      <img src="/assets/iv5-like.svg" width={28} height={28} alt="" />
+                      <span>{r.helpfulCount}</span>
+                    </button>
+                    <button className="iv-rail__btn" aria-label="Share" onClick={share}>
+                      <img src="/assets/iv5-share.svg" width={28} height={28} alt="" />
+                    </button>
+                    <button className="iv-rail__btn" aria-label="More options">
+                      <img src="/assets/iv5-dots-menu.svg" width={24} height={24} alt="" />
                     </button>
                   </div>
+                </div>
+                <div className="iv-atc">
+                  <img className="iv-atc__thumb" src={product.thumb} alt="" />
+                  <div className="iv-atc__info">
+                    <p className="iv-atc__price">
+                      <b>Đ{product.price}</b> <s>{product.oldPrice}</s> <span>47% off</span>
+                    </p>
+                    <p className="iv-atc__name">{product.shortName}</p>
+                  </div>
+                  <button className="iv-atc__btn" aria-label="Add to cart">
+                    <img src="/assets/iv5-cart-plus.svg" width={16} height={16} alt="" />
+                  </button>
                 </div>
               </div>
             </section>
@@ -403,27 +511,14 @@ export default function ImageView() {
         })}
       </div>
 
-      {/* sticky top overlay: close/share row + the centered product capsule —
-          identical for every review, stays put while the feed scrolls */}
-      <div className="iv-top">
-        <div className="iv-header">
-          <button className="iv-close" aria-label="Close" onClick={close}>
-            <img src="/assets/iv3-cross.svg" width={20} height={20} alt="" />
-          </button>
-          <button className="iv-close" aria-label="Share" onClick={share}>
-            <img src="/assets/iv3-share.svg" width={20} height={20} alt="" />
-          </button>
+      {/* FTUX: dimmed overlay with a swipe-up nudge (once per session) */}
+      {hintVisible && (
+        <div className="iv-vhint" aria-hidden>
+          <img className="iv-vhint__trail" src="/assets/iv5-swipe-trail.svg" width={51} height={156} alt="" />
+          <img className="iv-vhint__hand" src="/assets/iv5-hand-tap.svg" width={120} height={120} alt="" />
+          <p className="iv-vhint__label">Swipe up to see more</p>
         </div>
-        <div className="iv-capsule">
-          <img className="iv-capsule__thumb" src={product.thumb} alt="" />
-          <span className="iv-capsule__price">
-            <b>Đ{product.price}</b>
-            <s>{product.oldPrice}</s>
-          </span>
-          <button className="iv-capsule__atc">Add to Cart</button>
-        </div>
-      </div>
-
+      )}
     </div>
   )
 }

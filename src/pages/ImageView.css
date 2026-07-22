@@ -1,4 +1,4 @@
-/* Image-first review view — "Updated final" dark feed layout (Figma 931:21680) */
+/* Image-first review view — "Approach 3" card feed (Figma 1301:26362) */
 .iv {
   position: relative;
   background: #000000;
@@ -6,10 +6,14 @@
   overflow: hidden;
 }
 
-/* ---------- vertical feed (swipe up/down = next/previous reviewer) ---------- */
-.iv-vtrack {
+/* ---------- vertical feed of cards (swipe up/down = next reviewer) ---------- */
+.iv-feed {
   position: absolute;
   inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 6px;
   overflow-y: auto;
   overflow-x: hidden;
   scroll-snap-type: y mandatory;
@@ -18,19 +22,45 @@
   overscroll-behavior: contain;
 }
 
-.iv-vtrack::-webkit-scrollbar {
+.iv-feed::-webkit-scrollbar {
   display: none;
 }
 
-/* one full-screen page per review */
-.iv-page {
+/* one rounded card per review — full height; the next card is revealed only
+   by the idle jump nudge or by swiping */
+.iv-card {
   position: relative;
   width: 100%;
   height: 100%;
+  flex-shrink: 0;
   scroll-snap-align: start;
   scroll-snap-stop: always;
   overflow: hidden;
+  border-radius: 20px;
+  /* Safari fails to clip composited children (touch scroller, backdrop
+     blur) with overflow+radius alone — clip-path clips them reliably */
+  clip-path: inset(0 round 20px);
+  isolation: isolate;
   background: #000000;
+}
+
+/* blurred cover of the current photo behind the contained one */
+.iv-card__bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.iv-card__scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  -webkit-backdrop-filter: blur(42.5px);
+  backdrop-filter: blur(42.5px);
 }
 
 /* ---------- horizontal photo carousel (swipe left/right = same review) ---------- */
@@ -70,131 +100,95 @@
   -webkit-user-drag: none;
 }
 
-/* ---------- sticky top overlay: header + product capsule ---------- */
-.iv-top {
+/* ---------- card header: avatar + name/time + close ---------- */
+.iv-card__header {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  z-index: 5;
+  z-index: 3;
   display: flex;
-  flex-direction: column;
-  padding-bottom: 12px;
-  background: #000000;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 14px 0;
   pointer-events: none;
 }
 
-/* header row: close on the left, share on the right */
-.iv-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 16px;
-  flex-shrink: 0;
-}
-
-.iv-close {
-  pointer-events: auto;
-  flex-shrink: 0;
+.iv-avatar {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 40px;
   height: 40px;
-  border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(14px);
-}
-
-/* centered floating product capsule: thumb + price + Add to Cart */
-.iv-capsule {
-  pointer-events: auto;
-  align-self: center;
-  margin: 4px 0 0;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 5px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.16);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(14px);
-}
-
-.iv-capsule__thumb {
-  width: 30px;
-  height: 40px;
   flex-shrink: 0;
-  object-fit: cover;
-  border-radius: 8px;
-  background: #f9f9fb;
-  border: 0.625px solid #f2f3f7;
+  border-radius: 9999px;
+  background: rgba(0, 17, 255, 0.14);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.1px;
+  line-height: 20px;
 }
 
-.iv-capsule__price {
+.iv-card__user {
+  flex: 1;
+  min-width: 0;
   display: flex;
+  flex-direction: column;
+}
+
+.iv-card__name {
+  display: inline-flex;
   align-items: center;
-  gap: 4px;
-  margin: 0 2px 0 2px;
+  gap: 2px;
+  font-size: 13px;
+  letter-spacing: -0.1px;
+  line-height: 20px;
+  color: #ffffff;
   white-space: nowrap;
 }
 
-.iv-capsule__price b {
-  font-size: 16px;
-  font-weight: 600;
-  letter-spacing: -0.2px;
-  line-height: 22px;
-  color: #ffffff;
-}
-
-.iv-capsule__price s {
+.iv-card__time {
   font-size: 12px;
   letter-spacing: -0.1px;
   line-height: 18px;
   color: rgba(255, 255, 255, 0.64);
 }
 
-.iv-capsule__atc {
+.iv-card__close {
+  pointer-events: auto;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 40px;
-  padding: 0 12px;
-  border-radius: 8px;
-  background: #0f7eff;
-  color: #ffffff;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0;
-  line-height: 16px;
-  white-space: nowrap;
-  transition: transform 0.15s ease;
+  width: 28px;
+  height: 28px;
+  padding: 0;
 }
 
-.iv-capsule__atc:active {
-  transform: scale(0.96);
-}
-
-/* ---------- bottom stack: dots pager + solid review panel ---------- */
-.iv-bottom {
+/* ---------- bottom overlay: dots + copy/rail + ATC ---------- */
+.iv-card__bottom {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
-  z-index: 4;
+  z-index: 3;
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 16px;
+  padding: 8px 14px 14px;
+  /* fixed-height fade so tall expanded copy still sits on a dark backdrop */
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.85) 110px, rgba(0, 0, 0, 0.9) 100%);
   pointer-events: none;
 }
 
-/* dots pager sits on the image, just above the panel */
+/* dots pager */
 .iv-dots {
   display: flex;
   gap: 4px;
-  margin-bottom: 24px;
   padding: 4px 6px;
   border-radius: 9999px;
   background: rgba(0, 0, 0, 0.5);
@@ -218,21 +212,27 @@
   background: #ffffff;
 }
 
-/* solid black review panel */
-.iv-panel {
+/* copy on the left; the action rail is pinned so its height doesn't push
+   the dots pager up — dots sit just above the review title */
+.iv-card__row {
   width: 100%;
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  padding: 12px 16px 14px;
-  background: #000000;
+  align-items: flex-end;
+  gap: 20px;
+  padding-right: 48px; /* keeps copy clear of the pinned rail */
 }
 
-/* rating pill + title on one row */
-.iv-panel__titlerow {
+.iv-card__copy {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.iv-card__titlerow {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   max-width: 100%;
 }
 
@@ -258,7 +258,7 @@
   background: #e5641a;
 }
 
-.iv-review__title {
+.iv-card__title {
   min-width: 0;
   font-size: 14px;
   font-weight: 600;
@@ -273,36 +273,39 @@
 /* collapsible copy — height-animated on show more/less */
 .iv-collapse {
   width: 100%;
-  margin-top: 10px;
+  margin-top: 6px;
 }
 
-.iv-review__body {
+.iv-card__body {
   width: 100%;
   font-size: 14px;
   letter-spacing: -0.1px;
   line-height: 20px;
-  color: rgba(255, 255, 255, 0.8);
+  color: #ffffff;
 }
 
-/* collapsed: single truncated line */
-.iv-review__body--clamp {
+.iv-card__body--clamp {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.iv-review__toggle {
+.iv-card__toggle {
   pointer-events: auto;
-  margin-top: 6px;
+  margin-top: 2px;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
   padding: 0;
   font-size: 14px;
   font-weight: 500;
   letter-spacing: -0.1px;
   line-height: 20px;
-  color: #ffffff;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.iv-card__toggle-flip {
+  transform: rotate(180deg);
 }
 
 /* expanded: "Bought:" label + plain-text values */
@@ -313,11 +316,6 @@
   flex-wrap: wrap;
   gap: 16px;
   animation: iv-fade-in 0.3s ease both;
-}
-
-/* the expanded show-less sits a little lower after the Bought row */
-.iv-bought + .iv-review__toggle {
-  margin-top: 12px;
 }
 
 .iv-bought__label {
@@ -345,46 +343,175 @@
   }
 }
 
-/* footer row: reviewer on the left, like on the right */
-.iv-panel__footer {
-  width: 100%;
-  margin-top: 8px;
+/* action rail: like + count, share, three-dot menu — pinned bottom-right,
+   bottom-aligned with the copy block (14 padding + 60 ATC + 16 gap) */
+.iv-rail {
+  position: absolute;
+  right: 14px;
+  bottom: 90px;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
+  gap: 16px;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  border-radius: 9999px;
 }
 
-.iv-panel__reviewer {
-  display: inline-flex;
+.iv-rail__btn {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 4px;
-  font-size: 13px;
-  font-weight: 500;
+  padding: 0;
+  transition: transform 0.15s ease;
+}
+
+.iv-rail__btn:active {
+  transform: scale(0.92);
+}
+
+.iv-rail__btn span {
+  font-size: 14px;
+  font-weight: 600;
   letter-spacing: -0.1px;
-  line-height: 18px;
+  line-height: 20px;
   color: #ffffff;
 }
 
-.iv-panel__reviewer span {
-  font-weight: 400;
+/* frosted ATC bar at the card bottom */
+.iv-atc {
+  pointer-events: auto;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 60px;
+  padding: 8px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.16);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+
+.iv-atc__thumb {
+  width: 30px;
+  height: 40px;
+  flex-shrink: 0;
+  object-fit: contain;
+  border-radius: 5px;
+  background: #f9f9fb;
+  filter: drop-shadow(0 1.7px 3.3px rgba(0, 0, 0, 0.12));
+}
+
+.iv-atc__info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.iv-atc__price {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  white-space: nowrap;
+}
+
+.iv-atc__price b {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 20px;
+  color: #ffffff;
+  margin-right: 2px;
+}
+
+.iv-atc__price s {
+  font-size: 12px;
+  letter-spacing: -0.1px;
+  line-height: 18px;
   color: rgba(255, 255, 255, 0.64);
 }
 
-.iv-action {
-  pointer-events: auto;
+.iv-atc__price span {
+  font-size: 12px;
+  letter-spacing: -0.1px;
+  line-height: 18px;
+  color: #0f8857;
+  margin-left: 2px;
+}
+
+.iv-atc__name {
+  font-size: 12px;
+  letter-spacing: -0.1px;
+  line-height: 18px;
+  color: rgba(255, 255, 255, 0.64);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.iv-atc__btn {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 40px;
   height: 40px;
-  border-radius: 9999px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(14px);
-  transition: background 0.2s ease, transform 0.15s ease;
+  border-radius: 8px;
+  background: #0f7eff;
+  transition: transform 0.15s ease;
 }
 
-.iv-action:active {
-  background: rgba(255, 255, 255, 0.16);
-  transform: scale(0.94);
+.iv-atc__btn:active {
+  transform: scale(0.96);
+}
+
+/* ---------- FTUX: dimmed swipe-up overlay ---------- */
+.iv-vhint {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  background: rgba(0, 0, 0, 0.64);
+  pointer-events: none;
+}
+
+.iv-vhint__trail {
+  position: absolute;
+  left: 50%;
+  top: 41%;
+  transform: translateX(-50%);
+}
+
+.iv-vhint__hand {
+  position: absolute;
+  left: calc(50% + 24px);
+  top: 45%;
+  animation: iv-vhint-swipe 2s ease-in-out infinite;
+}
+
+@keyframes iv-vhint-swipe {
+  0%,
+  100% {
+    transform: translate(-50%, 24px) rotate(-44.56deg);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translate(-50%, -36px) rotate(-44.56deg);
+    opacity: 1;
+  }
+}
+
+.iv-vhint__label {
+  position: absolute;
+  left: 50%;
+  top: 62%;
+  transform: translateX(-50%);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.15px;
+  line-height: 20px;
+  color: #ffffff;
+  white-space: nowrap;
 }
