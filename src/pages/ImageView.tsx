@@ -454,16 +454,13 @@ export default function ImageView() {
                       {isExpanded ? (
                         <>
                           <p className="iv-card__body">{r.fullBody}</p>
-                          {r.boughtChips && (
-                            <p className="iv-bought">
-                              <span className="iv-bought__label">Bought:</span>
-                              {r.boughtChips.map((chip) => (
-                                <span key={chip} className="iv-bought__value">
-                                  {chip}
-                                </span>
-                              ))}
-                            </p>
-                          )}
+                          <div className="iv-chips">
+                            {r.chips.map((chip) => (
+                              <span key={chip} className="iv-chips__chip">
+                                {chip}
+                              </span>
+                            ))}
+                          </div>
                           <button className="iv-card__toggle" onClick={() => toggleExpanded(false)}>
                             show less
                             <img className="iv-card__toggle-flip" src="/assets/iv5-chevron-down.svg" width={16} height={16} alt="" />
