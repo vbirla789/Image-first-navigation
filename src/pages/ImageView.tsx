@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { photoReviews, product, reviews } from '../data/product'
+import type { StripPhoto } from '../data/product'
 import { MORPH_NAME, claimMorph, getMorphSource, setMorphSource } from '../lib/morph'
 import './ImageView.css'
 
@@ -37,8 +38,8 @@ export default function ImageView() {
     ),
   )
   const [expanded, setExpanded] = useState(false)
-  // when non-null, shows the full photo-gallery grid for that review index
-  const [galleryReview, setGalleryReview] = useState<number | null>(null)
+  // shows the full product photo-gallery grid (all reviews' images)
+  const [galleryOpen, setGalleryOpen] = useState(false)
   const vtrackRef = useRef<HTMLDivElement>(null)
   const htracks = useRef<(HTMLDivElement | null)[]>([])
   const drag = useRef({
@@ -324,12 +325,33 @@ export default function ImageView() {
     }
   }
 
-  // jump the active card's photo carousel to the tapped gallery thumbnail
-  const pickGalleryPhoto = (reviewIdx: number, photoIdx: number) => {
-    setPhotoIndexes((prev) => (prev[reviewIdx] === photoIdx ? prev : prev.map((p, j) => (j === reviewIdx ? photoIdx : p))))
-    const h = htracks.current[reviewIdx]
-    if (h) h.scrollLeft = photoIdx * h.clientWidth
-    setGalleryReview(null)
+  // jump to the review + photo the tapped gallery image belongs to
+  const pickGalleryPhoto = (photo: StripPhoto) => {
+    const reviewIdx = reviews.findIndex((r) => r.id === photo.reviewId)
+    if (reviewIdx < 0) {
+      setGalleryOpen(false)
+      return
+    }
+    setPhotoIndexes((prev) => prev.map((p, j) => (j === reviewIdx ? photo.photoIndex : p)))
+    activeRef.current = reviewIdx
+    setActiveReview(reviewIdx)
+    setExpanded(false)
+    expandedRef.current = false
+    setGalleryOpen(false)
+    // defer the scroll until after the overlay unmounts and the feed re-renders,
+    // otherwise the commit clobbers the programmatic scrollTop
+    requestAnimationFrame(() => {
+      const v = vtrackRef.current
+      if (v) {
+        v.style.scrollSnapType = 'none'
+        v.scrollTop = cardTop(v, reviewIdx)
+        requestAnimationFrame(() => {
+          v.style.scrollSnapType = ''
+        })
+      }
+      const h = htracks.current[reviewIdx]
+      if (h) h.scrollLeft = photo.photoIndex * h.clientWidth
+    })
   }
 
   const share = async () => {
@@ -490,16 +512,16 @@ export default function ImageView() {
                     </button>
                     <button
                       className="iv-rail__gallery"
-                      aria-label={`View all ${r.photos.length} photos`}
-                      onClick={() => setGalleryReview(i)}
+                      aria-label={`View all ${photoReviews.length} product photos`}
+                      onClick={() => setGalleryOpen(true)}
                     >
                       <span
                         className="iv-rail__gallery-card iv-rail__gallery-card--back"
-                        style={{ backgroundImage: `url(${(r.photos[1] ?? r.photos[0]).src})` }}
+                        style={{ backgroundImage: `url(${photoReviews[1].src})` }}
                       />
                       <span
                         className="iv-rail__gallery-card iv-rail__gallery-card--front"
-                        style={{ backgroundImage: `url(${r.photos[0].src})` }}
+                        style={{ backgroundImage: `url(${photoReviews[0].src})` }}
                       />
                     </button>
                   </div>
@@ -510,22 +532,18 @@ export default function ImageView() {
         })}
       </div>
 
-      {/* full photo-gallery grid for the active review */}
-      {galleryReview !== null && (
-        <div className="iv-gallery" role="dialog" aria-label="All photos">
+      {/* full product photo gallery — every review's images */}
+      {galleryOpen && (
+        <div className="iv-gallery" role="dialog" aria-label="All product photos">
           <div className="iv-gallery__header">
-            <h2 className="iv-gallery__title">All photos ({reviews[galleryReview].photos.length})</h2>
-            <button className="iv-gallery__close" aria-label="Close gallery" onClick={() => setGalleryReview(null)}>
+            <h2 className="iv-gallery__title">All photos ({photoReviews.length})</h2>
+            <button className="iv-gallery__close" aria-label="Close gallery" onClick={() => setGalleryOpen(false)}>
               <img src="/assets/iv5-cross.svg" width={15} height={15} alt="" />
             </button>
           </div>
           <div className="iv-gallery__grid">
-            {reviews[galleryReview].photos.map((photo, pi) => (
-              <button
-                key={photo.id}
-                className="iv-gallery__cell"
-                onClick={() => pickGalleryPhoto(galleryReview, pi)}
-              >
+            {photoReviews.map((photo, pi) => (
+              <button key={photo.id} className="iv-gallery__cell" onClick={() => pickGalleryPhoto(photo)}>
                 <img src={photo.src} alt={`Photo ${pi + 1}`} draggable={false} />
               </button>
             ))}
