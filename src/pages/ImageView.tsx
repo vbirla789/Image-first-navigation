@@ -37,6 +37,8 @@ export default function ImageView() {
     ),
   )
   const [expanded, setExpanded] = useState(false)
+  // when non-null, shows the full photo-gallery grid for that review index
+  const [galleryReview, setGalleryReview] = useState<number | null>(null)
   const vtrackRef = useRef<HTMLDivElement>(null)
   const htracks = useRef<(HTMLDivElement | null)[]>([])
   const drag = useRef({
@@ -322,6 +324,14 @@ export default function ImageView() {
     }
   }
 
+  // jump the active card's photo carousel to the tapped gallery thumbnail
+  const pickGalleryPhoto = (reviewIdx: number, photoIdx: number) => {
+    setPhotoIndexes((prev) => (prev[reviewIdx] === photoIdx ? prev : prev.map((p, j) => (j === reviewIdx ? photoIdx : p))))
+    const h = htracks.current[reviewIdx]
+    if (h) h.scrollLeft = photoIdx * h.clientWidth
+    setGalleryReview(null)
+  }
+
   const share = async () => {
     const url = window.location.origin + `/image-view?review=${review.id}&photo=${photoIndex}`
     try {
@@ -478,25 +488,50 @@ export default function ImageView() {
                     <button className="iv-rail__btn" aria-label="More options">
                       <img src="/assets/iv5-dots-menu.svg" width={24} height={24} alt="" />
                     </button>
+                    <button
+                      className="iv-rail__gallery"
+                      aria-label={`View all ${r.photos.length} photos`}
+                      onClick={() => setGalleryReview(i)}
+                    >
+                      <span
+                        className="iv-rail__gallery-card iv-rail__gallery-card--back"
+                        style={{ backgroundImage: `url(${(r.photos[1] ?? r.photos[0]).src})` }}
+                      />
+                      <span
+                        className="iv-rail__gallery-card iv-rail__gallery-card--front"
+                        style={{ backgroundImage: `url(${r.photos[0].src})` }}
+                      />
+                    </button>
                   </div>
-                </div>
-                <div className="iv-atc">
-                  <img className="iv-atc__thumb" src={product.thumb} alt="" />
-                  <div className="iv-atc__info">
-                    <p className="iv-atc__price">
-                      <b>Đ{product.price}</b> <s>{product.oldPrice}</s> <span>47% off</span>
-                    </p>
-                    <p className="iv-atc__name">{product.shortName}</p>
-                  </div>
-                  <button className="iv-atc__btn" aria-label="Add to cart">
-                    <img src="/assets/iv5-cart-plus.svg" width={16} height={16} alt="" />
-                  </button>
                 </div>
               </div>
             </section>
           )
         })}
       </div>
+
+      {/* full photo-gallery grid for the active review */}
+      {galleryReview !== null && (
+        <div className="iv-gallery" role="dialog" aria-label="All photos">
+          <div className="iv-gallery__header">
+            <h2 className="iv-gallery__title">All photos ({reviews[galleryReview].photos.length})</h2>
+            <button className="iv-gallery__close" aria-label="Close gallery" onClick={() => setGalleryReview(null)}>
+              <img src="/assets/iv5-cross.svg" width={15} height={15} alt="" />
+            </button>
+          </div>
+          <div className="iv-gallery__grid">
+            {reviews[galleryReview].photos.map((photo, pi) => (
+              <button
+                key={photo.id}
+                className="iv-gallery__cell"
+                onClick={() => pickGalleryPhoto(galleryReview, pi)}
+              >
+                <img src={photo.src} alt={`Photo ${pi + 1}`} draggable={false} />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -339,12 +339,12 @@
   }
 }
 
-/* action rail: like + count, share, three-dot menu — pinned bottom-right,
-   bottom-aligned with the copy block (14 padding + 60 ATC + 16 gap) */
+/* action rail: like + count, share, three-dot, gallery — pinned bottom-right,
+   anchored to the card bottom so the gallery icon lines up with the copy */
 .iv-rail {
   position: absolute;
   right: 14px;
-  bottom: 90px;
+  bottom: 14px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -372,92 +372,111 @@
   color: #ffffff;
 }
 
-/* frosted ATC bar at the card bottom */
-.iv-atc {
+/* stacked-photo icon that opens the full gallery */
+.iv-rail__gallery {
   pointer-events: auto;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  height: 60px;
-  padding: 8px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.16);
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
-}
-
-.iv-atc__thumb {
-  width: 30px;
-  height: 40px;
-  flex-shrink: 0;
-  object-fit: contain;
-  border-radius: 5px;
-  background: #f9f9fb;
-  filter: drop-shadow(0 1.7px 3.3px rgba(0, 0, 0, 0.12));
-}
-
-.iv-atc__info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.iv-atc__price {
-  display: flex;
-  align-items: baseline;
-  gap: 2px;
-  white-space: nowrap;
-}
-
-.iv-atc__price b {
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: 0;
-  line-height: 20px;
-  color: #ffffff;
-  margin-right: 2px;
-}
-
-.iv-atc__price s {
-  font-size: 12px;
-  letter-spacing: -0.1px;
-  line-height: 18px;
-  color: rgba(255, 255, 255, 0.64);
-}
-
-.iv-atc__price span {
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: -0.1px;
-  line-height: 18px;
-  color: #0f8857;
-  margin-left: 2px;
-}
-
-.iv-atc__name {
-  font-size: 12px;
-  letter-spacing: -0.1px;
-  line-height: 18px;
-  color: rgba(255, 255, 255, 0.64);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.iv-atc__btn {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  background: #0f7eff;
+  position: relative;
+  width: 28px;
+  height: 28px;
+  padding: 0;
   transition: transform 0.15s ease;
 }
 
-.iv-atc__btn:active {
+.iv-rail__gallery:active {
+  transform: scale(0.92);
+}
+
+.iv-rail__gallery-card {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 1px solid #ffffff;
+  background-color: #f9f9fb;
+  background-size: cover;
+  background-position: center;
+  box-shadow: 0 0 4.4px rgba(0, 0, 0, 0.12);
+}
+
+.iv-rail__gallery-card--back {
+  left: 7px;
+  top: 1px;
+  transform: rotate(8deg);
+}
+
+.iv-rail__gallery-card--front {
+  left: 1px;
+  top: 5px;
+}
+
+/* full-screen photo gallery grid */
+.iv-gallery {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  background: #000000;
+  animation: iv-gallery-in 0.2s ease;
+}
+
+@keyframes iv-gallery-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.iv-gallery__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 60px 16px 12px;
+}
+
+.iv-gallery__title {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.15px;
+  line-height: 20px;
+  color: #ffffff;
+}
+
+.iv-gallery__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+}
+
+.iv-gallery__grid {
+  flex: 1;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding: 4px 16px 24px;
+  align-content: start;
+}
+
+.iv-gallery__cell {
+  padding: 0;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #1a1a1a;
+  transition: transform 0.15s ease;
+}
+
+.iv-gallery__cell:active {
   transform: scale(0.96);
+}
+
+.iv-gallery__cell img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
