@@ -607,6 +607,7 @@ export default function ImageView() {
       {ftuxVisible && (
         <div className="iv-ftux" aria-hidden>
           <DotLottieReact src="/assets/swipe-up.lottie" autoplay loop className="iv-ftux__lottie" />
+          <p className="iv-ftux__label">Swipe up to see more</p>
         </div>
       )}
     </div>
