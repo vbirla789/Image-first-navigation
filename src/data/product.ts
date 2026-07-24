@@ -68,6 +68,20 @@ export const photoReviews: StripPhoto[] = [
   { id: 'p6', src: '/assets/watch-box-hand.png', reviewId: 'r2', photoIndex: 3 },
 ]
 
+/** Total customer photos, shown on the "64+" overlay and gallery header. */
+export const totalPhotos = 64
+
+/** Full customer-photo grid — cycles the real photos to fill the gallery,
+ * each tile mapped back to a real review so tapping opens the image view. */
+export const galleryPhotos: StripPhoto[] = Array.from({ length: totalPhotos }, (_, i) => {
+  // 3-wide grid over a 6-photo pool: index by (column, row) so every column
+  // walks all 6 images and no two neighbours (across or down) repeat
+  const col = i % 3
+  const row = Math.floor(i / 3)
+  const base = photoReviews[(col * 2 + row) % photoReviews.length]
+  return { ...base, id: `g${i}` }
+})
+
 const reviewChips = ['Mac OS', '8 GB RAM', 'Internal Version', '256 GB', 'Dual core memory']
 
 const longReviewBody = `The display is crisp and packed with useful info time, date, world time map, alarms and yet still easy to read. It has that retro-tech aesthetic that feels intentional rather than outdated. One of its standout features: you can track multiple time zones easily, which is rare at this price point. Company gives around 10 years on a single battery, basically "set it and forget it".`
