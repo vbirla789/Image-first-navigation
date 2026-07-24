@@ -480,3 +480,69 @@
   height: 100%;
   object-fit: cover;
 }
+
+/* ---------- report bottom sheet ---------- */
+.iv-sheet {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.iv-sheet__scrim {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: none;
+  background: rgba(0, 0, 0, 0.5);
+  animation: iv-fade-in 0.2s ease;
+}
+
+.iv-sheet__panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px calc(20px + env(safe-area-inset-bottom));
+  background: #1c1c1e;
+  border-radius: 20px 20px 0 0;
+  animation: iv-sheet-up 0.28s cubic-bezier(0.22, 0.9, 0.26, 1);
+}
+
+@keyframes iv-sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.iv-sheet__grabber {
+  width: 36px;
+  height: 4px;
+  margin: 4px 0 8px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.iv-sheet__item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 8px;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.1px;
+  line-height: 20px;
+  color: #ffffff;
+  transition: opacity 0.15s ease;
+}
+
+.iv-sheet__item:active {
+  opacity: 0.6;
+}

@@ -40,6 +40,19 @@ export default function ImageView() {
   const [expanded, setExpanded] = useState(false)
   // shows the full product photo-gallery grid (all reviews' images)
   const [galleryOpen, setGalleryOpen] = useState(false)
+  // per-review like state (seeded from the review's helpful data)
+  const [likes, setLikes] = useState(() =>
+    reviews.map((r) => ({ liked: r.helpfulSelected, count: r.helpfulCount })),
+  )
+  // "report this feedback" bottom sheet — holds the review index or null
+  const [reportFor, setReportFor] = useState<number | null>(null)
+
+  const toggleLike = (i: number) =>
+    setLikes((prev) =>
+      prev.map((l, j) =>
+        j === i ? { liked: !l.liked, count: l.count + (l.liked ? -1 : 1) } : l,
+      ),
+    )
   const vtrackRef = useRef<HTMLDivElement>(null)
   const htracks = useRef<(HTMLDivElement | null)[]>([])
   const drag = useRef({
@@ -500,14 +513,24 @@ export default function ImageView() {
                     </div>
                   </div>
                   <div className="iv-rail">
-                    <button className="iv-rail__btn" aria-label="Like">
-                      <img src="/assets/iv5-like.svg" width={28} height={28} alt="" />
-                      <span>{r.helpfulCount}</span>
+                    <button
+                      className={likes[i].liked ? 'iv-rail__btn iv-rail__btn--liked' : 'iv-rail__btn'}
+                      aria-label="Like"
+                      aria-pressed={likes[i].liked}
+                      onClick={() => toggleLike(i)}
+                    >
+                      <img
+                        src={likes[i].liked ? '/assets/iv5-like-filled.svg' : '/assets/iv5-like.svg'}
+                        width={28}
+                        height={28}
+                        alt=""
+                      />
+                      <span>{likes[i].count}</span>
                     </button>
                     <button className="iv-rail__btn" aria-label="Share" onClick={share}>
                       <img src="/assets/iv5-share.svg" width={28} height={28} alt="" />
                     </button>
-                    <button className="iv-rail__btn" aria-label="More options">
+                    <button className="iv-rail__btn" aria-label="More options" onClick={() => setReportFor(i)}>
                       <img src="/assets/iv5-dots-menu.svg" width={24} height={24} alt="" />
                     </button>
                     <button
@@ -547,6 +570,20 @@ export default function ImageView() {
                 <img src={photo.src} alt={`Photo ${pi + 1}`} draggable={false} />
               </button>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* report bottom sheet — opened from a review's three-dot menu */}
+      {reportFor !== null && (
+        <div className="iv-sheet" role="dialog" aria-label="Review options">
+          <button className="iv-sheet__scrim" aria-label="Dismiss" onClick={() => setReportFor(null)} />
+          <div className="iv-sheet__panel">
+            <span className="iv-sheet__grabber" />
+            <button className="iv-sheet__item" onClick={() => setReportFor(null)}>
+              <img src="/assets/iv5-report.svg" width={24} height={24} alt="" />
+              Report this feedback
+            </button>
           </div>
         </div>
       )}
