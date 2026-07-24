@@ -546,3 +546,23 @@
 .iv-sheet__item:active {
   opacity: 0.6;
 }
+
+/* ---------- FTUX: swipe-up gesture Lottie ---------- */
+.iv-ftux {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+  animation: iv-fade-in 0.2s ease;
+}
+
+.iv-ftux__lottie {
+  width: 450px;
+  height: 450px;
+  flex-shrink: 0;
+  filter: drop-shadow(0 2px 12px rgba(0, 0, 0, 0.4));
+}

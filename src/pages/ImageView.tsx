@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
+import { DotLottieReact } from '@lottiefiles/dotlottie-react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { photoReviews, product, reviews } from '../data/product'
 import type { StripPhoto } from '../data/product'
@@ -46,6 +47,17 @@ export default function ImageView() {
   )
   // "report this feedback" bottom sheet — holds the review index or null
   const [reportFor, setReportFor] = useState<number | null>(null)
+  // FTUX: swipe-up gesture Lottie, shown once per session until the user scrolls
+  const [ftuxVisible, setFtuxVisible] = useState(() => !sessionStorage.getItem('iv-ftux-seen'))
+
+  // dismissed by real user input (touch / wheel / pointer), never by the
+  // scroll events that mount positioning and browser scroll-restore fire
+  const dismissFtux = () => {
+    setFtuxVisible((visible) => {
+      if (visible) sessionStorage.setItem('iv-ftux-seen', '1')
+      return false
+    })
+  }
 
   const toggleLike = (i: number) =>
     setLikes((prev) =>
@@ -233,6 +245,7 @@ export default function ImageView() {
   /* mouse drag-to-swipe (touch is native via scroll-snap): the gesture locks
      to its dominant axis — horizontal flips photos, vertical flips cards */
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    dismissFtux()
     armIdleJump()
     if (e.pointerType !== 'mouse') return
     if ((e.target as HTMLElement).closest('button')) return
@@ -411,6 +424,8 @@ export default function ImageView() {
         onPointerMove={onPointerMove}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
+        onWheel={dismissFtux}
+        onTouchStart={dismissFtux}
       >
         {reviews.map((r, i) => {
           const pIdx = photoIndexes[i]
@@ -585,6 +600,13 @@ export default function ImageView() {
               Report this feedback
             </button>
           </div>
+        </div>
+      )}
+
+      {/* FTUX: swipe-up gesture hint — plays until the user scrolls */}
+      {ftuxVisible && (
+        <div className="iv-ftux" aria-hidden>
+          <DotLottieReact src="/assets/swipe-up.lottie" autoplay loop className="iv-ftux__lottie" />
         </div>
       )}
     </div>
